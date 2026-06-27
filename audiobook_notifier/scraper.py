@@ -141,6 +141,10 @@ def extract_book_info(product_item, base_url: str) -> dict:
             parsed = urlparse(urljoin(base_url, href))
             book_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
 
+    # Cover image
+    img = product_item.find("img")
+    cover_image_url = img.get("src") if img else None
+
     return {
         "title": title,
         "subtitle": subtitle,
@@ -151,6 +155,7 @@ def extract_book_info(product_item, base_url: str) -> dict:
         "language": language,
         "asin": asin,
         "book_url": book_url,
+        "cover_image_url": cover_image_url,
     }
 
 

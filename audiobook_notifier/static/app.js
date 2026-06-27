@@ -29,6 +29,12 @@ function formatScraped(iso) {
   return isNaN(d) ? iso : d.toLocaleString();
 }
 
+function coverThumb(url, title, size) {
+  if (!url) return '';
+  const src = escHtml(url.replace(/_SL\d+_/, `_SL${size}_`));
+  return `<img class="cover-thumb" src="${src}" alt="${escHtml(title || '')}" loading="lazy">`;
+}
+
 function renderBooks(books, containerEl) {
   if (!books.length) {
     containerEl.innerHTML = '<p class="empty-state">No books found.</p>';
@@ -36,6 +42,7 @@ function renderBooks(books, containerEl) {
   }
   const rows = books.map(b => `
     <tr>
+      <td class="col-cover">${coverThumb(b.cover_image_url, b.title, 80)}</td>
       <td>${escHtml(b.title || '—')}</td>
       <td>${escHtml(b.author || '—')}</td>
       <td>${escHtml(b.narrator || '—')}</td>
@@ -47,6 +54,7 @@ function renderBooks(books, containerEl) {
     <table>
       <thead>
         <tr>
+          <th class="col-cover"></th>
           <th>Title</th><th>Author</th><th>Narrator</th>
           <th>Duration</th><th>Release date</th><th>Language</th>
         </tr>
@@ -196,9 +204,12 @@ async function loadUpcoming() {
   }
   list.innerHTML = data.map(b => `
     <li>
-      <span class="upcoming-date">${formatDate(b.release_date)}</span>
-      ${escHtml(b.title)}
-      <span class="upcoming-series">— ${escHtml(b.series_title)}</span>
+      ${coverThumb(b.cover_image_url, b.title, 160)}
+      <div class="upcoming-text">
+        <span class="upcoming-date">${formatDate(b.release_date)}</span>
+        ${escHtml(b.title)}
+        <span class="upcoming-series">— ${escHtml(b.series_title)}</span>
+      </div>
     </li>`).join('');
   section.style.display = '';
 }

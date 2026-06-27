@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS books (
     release_date         TEXT,
     language             TEXT,
     book_url             TEXT,
+    cover_image_url      TEXT,
     first_seen_at        TEXT DEFAULT (datetime('now')),
     release_notified_at  TEXT
 );
@@ -62,7 +63,7 @@ def get_upcoming_books(limit: int = 3) -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
             """
-            SELECT b.title, b.release_date, s.title AS series_title
+            SELECT b.title, b.release_date, b.cover_image_url, s.title AS series_title
             FROM books b
             JOIN series s ON s.id = b.series_id
             WHERE b.release_date > date('now')
@@ -134,8 +135,8 @@ def insert_book(series_id: int, book: dict) -> None:
             """
             INSERT INTO books
                 (series_id, asin, title, subtitle, author, narrator,
-                 duration, release_date, language, book_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 duration, release_date, language, book_url, cover_image_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 series_id,
@@ -148,6 +149,7 @@ def insert_book(series_id: int, book: dict) -> None:
                 book["release_date"],
                 book["language"],
                 book["book_url"],
+                book.get("cover_image_url"),
             ),
         )
 
@@ -158,7 +160,8 @@ def update_book(asin: str, book: dict) -> None:
             """
             UPDATE books SET
                 title = ?, subtitle = ?, author = ?, narrator = ?,
-                duration = ?, release_date = ?, language = ?, book_url = ?
+                duration = ?, release_date = ?, language = ?, book_url = ?,
+                cover_image_url = ?
             WHERE asin = ?
             """,
             (
@@ -170,6 +173,7 @@ def update_book(asin: str, book: dict) -> None:
                 book["release_date"],
                 book["language"],
                 book["book_url"],
+                book.get("cover_image_url"),
                 asin,
             ),
         )

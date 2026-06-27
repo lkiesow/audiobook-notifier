@@ -101,9 +101,10 @@
       margin-bottom: 1.5rem;
     }
     #upcoming-section h2 { font-size: 1rem; margin-bottom: 0.75rem; }
-    #upcoming-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
-    #upcoming-list li { font-size: 0.88rem; }
-    #upcoming-list .upcoming-date { color: var(--color-meta); margin-right: 0.5rem; }
+    #upcoming-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+    #upcoming-list li { font-size: 0.88rem; display: flex; align-items: center; gap: 0.75rem; }
+    #upcoming-list .upcoming-text { display: flex; flex-direction: column; gap: 0.15rem; }
+    #upcoming-list .upcoming-date { color: var(--color-meta); }
     #upcoming-list .upcoming-series { color: var(--color-muted); }
 
     /* Series list */
@@ -139,6 +140,10 @@
     th, td { text-align: left; padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border-divider); }
     th { background: var(--bg-th); font-weight: 600; color: var(--color-th); }
     tr:last-child td { border-bottom: none; }
+
+    .col-cover { width: 52px; padding-right: 4px; }
+    .cover-thumb { display: block; width: 40px; height: 40px; object-fit: cover; border-radius: 3px; }
+    #upcoming-list .cover-thumb { width: 44px; height: 44px; border-radius: 4px; flex-shrink: 0; }
 
     .empty-state { padding: 1rem; color: var(--color-muted); font-size: 0.85rem; }
 
