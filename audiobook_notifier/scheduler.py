@@ -44,7 +44,8 @@ def scrape_and_update(series_id: int) -> bool:
         if asin not in existing_asins:
             try:
                 database.insert_book(series_id, book)
-                notifications.notify_new_book(book["title"], result["series_title"])
+                if series["last_scraped_at"] is not None:
+                    notifications.notify_new_book(book["title"], result["series_title"])
             except sqlite3.IntegrityError:
                 logger.warning(
                     "ASIN %s already exists in another series; skipping insert", asin
