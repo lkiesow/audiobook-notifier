@@ -57,7 +57,7 @@ function renderBooks(books, containerEl) {
 
 function startPendingPoll() {
   if (pendingPollInterval) return;
-  pendingPollInterval = setInterval(loadSeries, 3000);
+  pendingPollInterval = setInterval(() => loadSeries(true), 3000);
 }
 
 function stopPendingPoll() {
@@ -130,13 +130,72 @@ function renderSeries(seriesList) {
 
 // --- Actions ---
 
-async function loadSeries() {
-  document.getElementById('loading').style.display = '';
+function patchSeries(seriesList) {
+  const container = document.getElementById('series-container');
+
+  // If the set of series ids changed, fall back to a full re-render
+  const existingIds = new Set(
+    [...container.querySelectorAll('[data-series-id]')]
+      .map(el => parseInt(el.dataset.seriesId, 10))
+  );
+  const newIds = new Set(seriesList.map(s => s.id));
+  const structureChanged =
+    seriesList.some(s => !existingIds.has(s.id)) ||
+    [...existingIds].some(id => !newIds.has(id));
+
+  if (structureChanged) {
+    renderSeries(seriesList);
+    return;
+  }
+
+  // Update only the mutable text/metadata; never touch .books-container
+  for (const s of seriesList) {
+    const card = container.querySelector(`[data-series-id="${s.id}"]`);
+    if (!card) continue;
+
+    const titleEl = card.querySelector('.series-title');
+    if (titleEl) {
+      titleEl.textContent = s.title || 'Scraping…';
+      titleEl.classList.toggle('pending', !s.title);
+    }
+
+    const metaEl = card.querySelector('.series-meta');
+    if (metaEl) {
+      const n = s.book_count ?? 0;
+      metaEl.textContent = `${n} book${n !== 1 ? 's' : ''} · scraped ${formatScraped(s.last_scraped_at)}`;
+      metaEl.dataset.scrapedAt = s.last_scraped_at || '';
+    }
+  }
+
+  // Detect completed refreshes: reload books for open cards whose timestamp changed
+  for (const s of seriesList) {
+    if (refreshingSeries.has(s.id) && s.last_scraped_at !== refreshingSeries.get(s.id)) {
+      refreshingSeries.delete(s.id);
+      if (expandedSeries.has(s.id)) {
+        const card = container.querySelector(`[data-series-id="${s.id}"]`);
+        if (card) loadBooks(s.id, card.querySelector('.books-container'));
+      }
+    }
+  }
+
+  if (seriesList.some(s => !s.title) || refreshingSeries.size > 0) {
+    startPendingPoll();
+  } else {
+    stopPendingPoll();
+  }
+}
+
+async function loadSeries(patch = false) {
+  if (!patch) document.getElementById('loading').style.display = '';
   try {
     const data = await apiFetch('/api/series');
-    renderSeries(data);
+    if (patch) {
+      patchSeries(data);
+    } else {
+      renderSeries(data);
+    }
   } finally {
-    document.getElementById('loading').style.display = 'none';
+    if (!patch) document.getElementById('loading').style.display = 'none';
   }
 }
 
