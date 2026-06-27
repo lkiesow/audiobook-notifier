@@ -164,6 +164,10 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
   const input = document.getElementById('url-input');
   const btn = e.target.querySelector('button[type="submit"]');
   errorEl.textContent = '';
+  if (!input.value.includes('audible.') || !input.value.includes('/series/')) {
+    errorEl.textContent = 'Please enter an Audible series URL';
+    return;
+  }
   btn.disabled = true;
   try {
     await apiFetch('/api/series', {

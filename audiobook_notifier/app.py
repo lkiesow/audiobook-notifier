@@ -36,6 +36,9 @@ def add_series():
         return jsonify({"error": "url is required"}), 400
 
     url = _normalize_url(url)
+    parsed = urlparse(url)
+    if "audible." not in parsed.netloc or "/series/" not in parsed.path:
+        return jsonify({"error": "URL must be an Audible series page"}), 400
 
     if database.get_series_by_url(url):
         return jsonify({"error": "Series already tracked"}), 409
