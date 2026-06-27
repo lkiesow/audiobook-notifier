@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audiobook Notifier</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      padding: 2rem 1rem;
+    }
+
+    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+
+    /* Add form */
+    #add-section {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      max-width: 700px;
+    }
+    #add-section h2 { font-size: 1rem; margin-bottom: 0.75rem; }
+    #add-form { display: flex; gap: 0.5rem; }
+    #url-input {
+      flex: 1;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    button {
+      padding: 0.4rem 0.9rem;
+      border: 1px solid #888;
+      border-radius: 4px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    button:hover { background: #f0f0f0; }
+    button.danger { border-color: #c00; color: #c00; }
+    button.danger:hover { background: #fff0f0; }
+    button:disabled { opacity: 0.5; cursor: default; }
+
+    #add-error { color: #c00; font-size: 0.85rem; margin-top: 0.5rem; }
+
+    /* Series list */
+    #series-container { max-width: 700px; display: flex; flex-direction: column; gap: 1rem; }
+
+    .series-card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .series-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .series-header:hover { background: #fafafa; }
+
+    .series-title { font-weight: 600; flex: 1; font-size: 0.95rem; }
+    .series-title.pending { color: #888; font-style: italic; }
+
+    .series-meta { font-size: 0.78rem; color: #666; white-space: nowrap; }
+
+    /* Books table */
+    .books-container { display: none; border-top: 1px solid #eee; overflow-x: auto; }
+    .books-container.open { display: block; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th, td { text-align: left; padding: 0.45rem 0.75rem; border-bottom: 1px solid #eee; }
+    th { background: #f9f9f9; font-weight: 600; color: #444; }
+    tr:last-child td { border-bottom: none; }
+
+    .empty-state { padding: 1rem; color: #888; font-size: 0.85rem; }
+
+    #loading { color: #888; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>Audiobook Notifier</h1>
+
+  <section id="add-section">
+    <h2>Track a new series</h2>
+    <form id="add-form">
+      <input
+        type="url"
+        id="url-input"
+        placeholder="https://www.audible.de/series/…"
+        required
+      >
+      <button type="submit">Add series</button>
+    </form>
+    <div id="add-error"></div>
+  </section>
+
+  <div id="loading">Loading…</div>
+  <div id="series-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
