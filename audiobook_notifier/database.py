@@ -49,14 +49,24 @@ def get_all_series() -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
             """
-            SELECT s.*, COUNT(b.id) as book_count
+            SELECT s.*, COUNT(b.id) as book_count,
+                (SELECT GROUP_CONCAT(cover_image_url, '|')
+                 FROM (SELECT cover_image_url FROM books
+                       WHERE series_id = s.id AND cover_image_url IS NOT NULL
+                       ORDER BY release_date LIMIT 3)
+                ) as cover_images
             FROM series s
             LEFT JOIN books b ON b.series_id = s.id
             GROUP BY s.id
             ORDER BY s.title
             """
         ).fetchall()
-    return [dict(r) for r in rows]
+    result = []
+    for r in rows:
+        d = dict(r)
+        d['cover_images'] = d['cover_images'].split('|') if d.get('cover_images') else []
+        result.append(d)
+    return result
 
 
 def get_upcoming_books(limit: int = 3) -> list[dict]:

@@ -74,6 +74,17 @@ function stopPendingPoll() {
   pendingPollInterval = null;
 }
 
+function buildCoverStack(covers) {
+  if (!covers || !covers.length) return '';
+  const size = 36, offset = 20;
+  const width = size + (covers.length - 1) * offset;
+  const imgs = covers.map((url, i) => {
+    const src = escHtml(url.replace(/_SL\d+_/, '_SL80_'));
+    return `<img class="stack-thumb" src="${src}" alt="" loading="lazy" style="left:${i * offset}px;z-index:${covers.length - i}">`;
+  }).join('');
+  return `<div class="cover-stack" style="width:${width}px" data-covers="${escHtml(covers.join('|'))}">${imgs}</div>`;
+}
+
 function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -97,6 +108,7 @@ function renderSeries(seriesList) {
     return `
       <div class="series-card" data-series-id="${s.id}">
         <div class="series-header" data-action="toggle">
+          ${buildCoverStack(s.cover_images || [])}
           <span class="series-title${titleClass}">${displayTitle}</span>
           <span class="series-meta" data-scraped-at="${s.last_scraped_at || ''}">${bookCount} book${bookCount !== 1 ? 's' : ''} · scraped ${formatScraped(s.last_scraped_at)}</span>
           <button data-action="refresh" title="Refresh">↻</button>
@@ -171,6 +183,14 @@ function patchSeries(seriesList) {
     if (titleEl) {
       titleEl.textContent = s.title || 'Scraping…';
       titleEl.classList.toggle('pending', !s.title);
+    }
+
+    const newCovers = (s.cover_images || []).join('|');
+    const stackEl = card.querySelector('.cover-stack');
+    if (stackEl && stackEl.dataset.covers !== newCovers) {
+      stackEl.outerHTML = buildCoverStack(s.cover_images || []);
+    } else if (!stackEl && newCovers) {
+      card.querySelector('.series-header').insertAdjacentHTML('afterbegin', buildCoverStack(s.cover_images || []));
     }
 
     const metaEl = card.querySelector('.series-meta');
