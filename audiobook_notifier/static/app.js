@@ -1,6 +1,8 @@
 'use strict';
 
 const expandedSeries = new Set();
+let pendingPollInterval = null;
+const refreshingSeries = new Map(); // id → last_scraped_at snapshot
 
 // --- API helpers ---
 
@@ -53,6 +55,17 @@ function renderBooks(books, containerEl) {
     </table>`;
 }
 
+function startPendingPoll() {
+  if (pendingPollInterval) return;
+  pendingPollInterval = setInterval(loadSeries, 3000);
+}
+
+function stopPendingPoll() {
+  if (!pendingPollInterval) return;
+  clearInterval(pendingPollInterval);
+  pendingPollInterval = null;
+}
+
 function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -65,6 +78,7 @@ function renderSeries(seriesList) {
   const container = document.getElementById('series-container');
   if (!seriesList.length) {
     container.innerHTML = '<p style="color:#888;font-size:.9rem">No series tracked yet.</p>';
+    stopPendingPoll();
     return;
   }
   container.innerHTML = seriesList.map(s => {
@@ -76,7 +90,7 @@ function renderSeries(seriesList) {
       <div class="series-card" data-series-id="${s.id}">
         <div class="series-header" data-action="toggle">
           <span class="series-title${titleClass}">${displayTitle}</span>
-          <span class="series-meta">${bookCount} book${bookCount !== 1 ? 's' : ''} · scraped ${formatScraped(s.last_scraped_at)}</span>
+          <span class="series-meta" data-scraped-at="${s.last_scraped_at || ''}">${bookCount} book${bookCount !== 1 ? 's' : ''} · scraped ${formatScraped(s.last_scraped_at)}</span>
           <button data-action="refresh" title="Refresh">↻</button>
           <button class="danger" data-action="delete" title="Untrack">✕</button>
         </div>
@@ -93,6 +107,24 @@ function renderSeries(seriesList) {
         loadBooks(id, booksEl);
       }
     }
+  }
+
+  // Detect completed refreshes: timestamp changed → reload books if expanded
+  for (const s of seriesList) {
+    if (refreshingSeries.has(s.id) && s.last_scraped_at !== refreshingSeries.get(s.id)) {
+      refreshingSeries.delete(s.id);
+      const card = container.querySelector(`[data-series-id="${s.id}"]`);
+      if (card && expandedSeries.has(s.id)) {
+        const booksEl = card.querySelector('.books-container');
+        if (booksEl) loadBooks(s.id, booksEl);
+      }
+    }
+  }
+
+  if (seriesList.some(s => !s.title) || refreshingSeries.size > 0) {
+    startPendingPoll();
+  } else {
+    stopPendingPoll();
   }
 }
 
@@ -140,16 +172,13 @@ async function refreshSeries(btn, seriesId) {
   btn.disabled = true;
   btn.textContent = '…';
   try {
-    await apiFetch(`/api/series/${seriesId}/refresh`, { method: 'POST' });
-    // Reload books if expanded
     const card = document.querySelector(`[data-series-id="${seriesId}"]`);
-    if (card) {
-      const booksEl = card.querySelector('.books-container');
-      if (booksEl && expandedSeries.has(seriesId)) {
-        booksEl.dataset.booksLoaded = 'false';
-        await loadBooks(seriesId, booksEl);
-      }
-    }
+    const snapshot = card?.querySelector('.series-meta')?.dataset.scrapedAt ?? null;
+    refreshingSeries.set(seriesId, snapshot);
+    await apiFetch(`/api/series/${seriesId}/refresh`, { method: 'POST' });
+    startPendingPoll();
+  } catch (err) {
+    refreshingSeries.delete(seriesId);
   } finally {
     btn.disabled = false;
     btn.textContent = orig;
