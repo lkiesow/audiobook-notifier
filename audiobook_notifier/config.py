@@ -10,3 +10,7 @@ SCRAPE_DELAY_SECONDS: int = int(os.environ.get("SCRAPE_DELAY_SECONDS", "60"))
 HOST: str = os.environ.get("HOST", "0.0.0.0")
 PORT: int = int(os.environ.get("PORT", "5000"))
 LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO")
+
+MATRIX_HOMESERVER: str = os.environ.get("MATRIX_HOMESERVER", "")
+MATRIX_ACCESS_TOKEN: str = os.environ.get("MATRIX_ACCESS_TOKEN", "")
+MATRIX_ROOM_ID: str = os.environ.get("MATRIX_ROOM_ID", "")

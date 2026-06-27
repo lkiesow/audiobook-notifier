@@ -1,5 +1,11 @@
 import atexit
 import logging
+import sys
+
+if len(sys.argv) > 1 and sys.argv[1] == "setup-matrix":
+    from audiobook_notifier.setup_matrix import run_wizard
+    run_wizard()
+    sys.exit(0)
 
 from audiobook_notifier import config  # load_dotenv() fires on import
 
