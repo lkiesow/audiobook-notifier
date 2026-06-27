@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-slim
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check syntax
+        run: |
+          python -m py_compile \
+            audiobook_notifier/*.py
+
+      - name: Start server
+        run: python -m audiobook_notifier > server.log 2>&1 &
+        env:
+          PORT: 5000
+          LOG_LEVEL: INFO
+          # Disable scheduled scrapes during tests
+          SCRAPE_INTERVAL_HOURS: 999999
+
+      - name: Wait for server to be ready
+        run: |
+          timeout 30 bash -c \
+            'until curl -sf http://localhost:5000/ > /dev/null 2>&1; do sleep 1; done'
+
+      - name: Static files are served
+        run: |
+          curl -sf http://localhost:5000/ | grep -q 'Audiobook Notifier'
+          curl -sf http://localhost:5000/app.js | grep -q 'apiFetch'
+
+      - name: GET /api/series returns empty list initially
+        run: |
+          body=$(curl -sf http://localhost:5000/api/series)
+          [ "$body" = "[]" ]
+
+      - name: POST /api/series - missing URL returns 400
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -X POST http://localhost:5000/api/series \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+          [ "$status" = "400" ]
+
+      - name: POST /api/series - add series returns 201
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -X POST http://localhost:5000/api/series \
+            -H 'Content-Type: application/json' \
+            -d '{"url":"https://www.audible.de/series/Wizarding-World-Hoerbuecher/B07CMBKWY8"}')
+          [ "$status" = "201" ]
+
+      - name: POST /api/series - duplicate URL returns 409
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -X POST http://localhost:5000/api/series \
+            -H 'Content-Type: application/json' \
+            -d '{"url":"https://www.audible.de/series/Wizarding-World-Hoerbuecher/B07CMBKWY8"}')
+          [ "$status" = "409" ]
+
+      - name: GET /api/series - series appears in list
+        run: |
+          body=$(curl -sf http://localhost:5000/api/series)
+          echo "$body" | grep -q '"id"'
+
+      - name: GET /api/series/:id/books - returns JSON array
+        run: |
+          body=$(curl -sf http://localhost:5000/api/series/1/books)
+          # Array brackets present (may be empty while background scrape is running)
+          echo "$body" | grep -q '^\['
+
+      - name: GET /api/series/:id/books - unknown id returns 404
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            http://localhost:5000/api/series/9999/books)
+          [ "$status" = "404" ]
+
+      - name: POST /api/series/:id/refresh returns 202
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -X POST http://localhost:5000/api/series/1/refresh)
+          [ "$status" = "202" ]
+
+      - name: DELETE /api/series/:id returns 204 and removes series
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+            -X DELETE http://localhost:5000/api/series/1)
+          [ "$status" = "204" ]
+          body=$(curl -sf http://localhost:5000/api/series)
+          [ "$body" = "[]" ]
+
+      - name: Show server logs
+        if: always()
+        run: cat server.log 2>/dev/null || echo "(no log file found)"
