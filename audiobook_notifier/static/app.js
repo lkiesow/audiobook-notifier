@@ -156,6 +156,12 @@ function patchSeries(seriesList) {
     return;
   }
 
+  // Snapshot which series are currently pending before we update the DOM
+  const pendingBefore = new Set(
+    [...container.querySelectorAll('.series-title.pending')]
+      .map(el => parseInt(el.closest('[data-series-id]').dataset.seriesId, 10))
+  );
+
   // Update only the mutable text/metadata; never touch .books-container
   for (const s of seriesList) {
     const card = container.querySelector(`[data-series-id="${s.id}"]`);
@@ -173,6 +179,11 @@ function patchSeries(seriesList) {
       metaEl.textContent = `${n} book${n !== 1 ? 's' : ''} · scraped ${formatScraped(s.last_scraped_at)}`;
       metaEl.dataset.scrapedAt = s.last_scraped_at || '';
     }
+  }
+
+  // If any previously-pending series just acquired a title, refresh upcoming
+  if (seriesList.some(s => pendingBefore.has(s.id) && s.title)) {
+    loadUpcoming();
   }
 
   // Detect completed refreshes: reload books for open cards whose timestamp changed
