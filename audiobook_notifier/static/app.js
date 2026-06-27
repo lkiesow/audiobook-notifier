@@ -43,7 +43,7 @@ function renderBooks(books, containerEl) {
   const rows = books.map(b => `
     <tr>
       <td class="col-cover">${coverThumb(b.cover_image_url, b.title, 80)}</td>
-      <td>${escHtml(b.title || '—')}</td>
+      <td>${b.book_url ? `<a href="${escHtml(b.book_url)}" target="_blank" rel="noopener noreferrer">${escHtml(b.title || '—')}</a>` : escHtml(b.title || '—')}</td>
       <td>${escHtml(b.author || '—')}</td>
       <td>${escHtml(b.narrator || '—')}</td>
       <td>${escHtml(b.duration || '—')}</td>
@@ -238,7 +238,7 @@ async function loadUpcoming() {
       ${coverThumb(b.cover_image_url, b.title, 160)}
       <div class="upcoming-text">
         <span class="upcoming-date">${formatDate(b.release_date)}</span>
-        ${escHtml(b.title)}
+        ${b.book_url ? `<a href="${escHtml(b.book_url)}" target="_blank" rel="noopener noreferrer">${escHtml(b.title)}</a>` : escHtml(b.title)}
         <span class="upcoming-series">— ${escHtml(b.series_title)}</span>
       </div>
     </li>`).join('');
