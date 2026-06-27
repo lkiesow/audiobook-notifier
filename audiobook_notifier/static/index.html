@@ -55,7 +55,7 @@
     h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
 
     /* Add form */
-    main { max-width: 700px; margin: 0 auto; }
+    main { max-width: 900px; margin: 0 auto; }
 
     #add-section {
       background: var(--bg-card);
@@ -127,10 +127,11 @@
     }
     .series-header:hover { background: var(--bg-hover); }
 
-    .series-title { font-weight: 600; flex: 1; font-size: 0.95rem; }
+    .series-title-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+    .series-title { font-weight: 600; font-size: 0.95rem; }
     .series-title.pending { color: var(--color-muted); font-style: italic; }
 
-    .series-meta { font-size: 0.78rem; color: var(--color-meta); white-space: nowrap; }
+    .series-meta { font-size: 0.78rem; color: var(--color-meta); }
 
     /* Books table */
     .books-container { display: none; border-top: 1px solid var(--border-divider); overflow-x: auto; }
@@ -141,8 +142,9 @@
     th { background: var(--bg-th); font-weight: 600; color: var(--color-th); }
     tr:last-child td { border-bottom: none; }
 
-    .cover-stack { position: relative; height: 36px; flex-shrink: 0; }
-    .stack-thumb { position: absolute; width: 36px; height: 36px; object-fit: cover; border-radius: 3px; border: 2px solid var(--bg-card); }
+    .cover-stack { display: flex; align-items: center; flex-shrink: 0; }
+    .stack-thumb { position: relative; width: 36px; height: 36px; object-fit: cover; border-radius: 3px; border: 2px solid var(--bg-card); }
+    .stack-thumb + .stack-thumb { margin-left: -16px; }
 
     .col-cover { width: 52px; padding-right: 4px; }
     .cover-thumb { display: block; width: 40px; height: 40px; object-fit: cover; border-radius: 3px; }
@@ -154,6 +156,13 @@
     .empty-state { padding: 1rem; color: var(--color-muted); font-size: 0.85rem; }
 
     #loading { color: var(--color-muted); font-size: 0.9rem; }
+
+    @media (max-width: 560px) {
+      body { padding: 1rem 0.5rem; }
+      button { min-height: 44px; padding: 0.4rem 0.75rem; }
+      .col-narrator, .col-language, .col-duration { display: none; }
+      .stack-thumb + .stack-thumb { margin-left: -24px; }
+    }
   </style>
 </head>
 <body>

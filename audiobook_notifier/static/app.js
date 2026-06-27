@@ -45,18 +45,18 @@ function renderBooks(books, containerEl) {
       <td class="col-cover">${coverThumb(b.cover_image_url, b.title, 80)}</td>
       <td>${b.book_url ? `<a href="${escHtml(b.book_url)}" target="_blank" rel="noopener noreferrer">${escHtml(b.title || '—')}</a>` : escHtml(b.title || '—')}</td>
       <td>${escHtml(b.author || '—')}</td>
-      <td>${escHtml(b.narrator || '—')}</td>
-      <td>${escHtml(b.duration || '—')}</td>
+      <td class="col-narrator">${escHtml(b.narrator || '—')}</td>
+      <td class="col-duration">${escHtml(b.duration || '—')}</td>
       <td>${formatDate(b.release_date)}</td>
-      <td>${escHtml(b.language || '—')}</td>
+      <td class="col-language">${escHtml(b.language || '—')}</td>
     </tr>`).join('');
   containerEl.innerHTML = `
     <table>
       <thead>
         <tr>
           <th class="col-cover"></th>
-          <th>Title</th><th>Author</th><th>Narrator</th>
-          <th>Duration</th><th>Release date</th><th>Language</th>
+          <th>Title</th><th>Author</th><th class="col-narrator">Narrator</th>
+          <th class="col-duration">Duration</th><th>Release date</th><th class="col-language">Language</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -76,13 +76,11 @@ function stopPendingPoll() {
 
 function buildCoverStack(covers) {
   if (!covers || !covers.length) return '';
-  const size = 36, offset = 20;
-  const width = size + (covers.length - 1) * offset;
   const imgs = covers.map((url, i) => {
     const src = escHtml(url.replace(/_SL\d+_/, '_SL80_'));
-    return `<img class="stack-thumb" src="${src}" alt="" loading="lazy" style="left:${i * offset}px;z-index:${covers.length - i}">`;
+    return `<img class="stack-thumb" src="${src}" alt="" loading="lazy" style="z-index:${covers.length - i}">`;
   }).join('');
-  return `<div class="cover-stack" style="width:${width}px" data-covers="${escHtml(covers.join('|'))}">${imgs}</div>`;
+  return `<div class="cover-stack" data-covers="${escHtml(covers.join('|'))}">${imgs}</div>`;
 }
 
 function escHtml(str) {
@@ -109,8 +107,10 @@ function renderSeries(seriesList) {
       <div class="series-card" data-series-id="${s.id}">
         <div class="series-header" data-action="toggle">
           ${buildCoverStack(s.cover_images || [])}
-          <span class="series-title${titleClass}">${displayTitle}</span>
-          <span class="series-meta" data-scraped-at="${s.last_scraped_at || ''}">${bookCount} book${bookCount !== 1 ? 's' : ''} · scraped ${formatScraped(s.last_scraped_at)}</span>
+          <div class="series-title-wrap">
+            <span class="series-title${titleClass}">${displayTitle}</span>
+            <span class="series-meta" data-scraped-at="${s.last_scraped_at || ''}">${bookCount} book${bookCount !== 1 ? 's' : ''} · scraped ${formatScraped(s.last_scraped_at)}</span>
+          </div>
           <button data-action="refresh" title="Refresh">↻</button>
           <button class="danger" data-action="delete" title="Untrack">✕</button>
         </div>
