@@ -171,6 +171,7 @@ function patchSeries(seriesList) {
   for (const s of seriesList) {
     if (refreshingSeries.has(s.id) && s.last_scraped_at !== refreshingSeries.get(s.id)) {
       refreshingSeries.delete(s.id);
+      loadUpcoming();
       if (expandedSeries.has(s.id)) {
         const card = container.querySelector(`[data-series-id="${s.id}"]`);
         if (card) loadBooks(s.id, card.querySelector('.books-container'));
@@ -183,6 +184,23 @@ function patchSeries(seriesList) {
   } else {
     stopPendingPoll();
   }
+}
+
+async function loadUpcoming() {
+  const data = await apiFetch('/api/upcoming');
+  const section = document.getElementById('upcoming-section');
+  const list = document.getElementById('upcoming-list');
+  if (!data.length) {
+    section.style.display = 'none';
+    return;
+  }
+  list.innerHTML = data.map(b => `
+    <li>
+      <span class="upcoming-date">${formatDate(b.release_date)}</span>
+      ${escHtml(b.title)}
+      <span class="upcoming-series">— ${escHtml(b.series_title)}</span>
+    </li>`).join('');
+  section.style.display = '';
 }
 
 async function loadSeries(patch = false) {
@@ -223,7 +241,7 @@ async function deleteSeries(seriesId) {
   if (!confirm('Stop tracking this series?')) return;
   await apiFetch(`/api/series/${seriesId}`, { method: 'DELETE' });
   expandedSeries.delete(seriesId);
-  await loadSeries();
+  await Promise.all([loadSeries(), loadUpcoming()]);
 }
 
 async function refreshSeries(btn, seriesId) {
@@ -264,7 +282,7 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
       body: JSON.stringify({ url: input.value.trim() }),
     });
     input.value = '';
-    await loadSeries();
+    await Promise.all([loadSeries(), loadUpcoming()]);
   } catch (err) {
     errorEl.textContent = err.status === 409 ? 'This series is already being tracked.' : (err.message || 'Something went wrong.');
   } finally {
@@ -298,3 +316,4 @@ document.getElementById('series-container').addEventListener('click', async (e) 
 // --- Init ---
 
 loadSeries();
+loadUpcoming();

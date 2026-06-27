@@ -58,6 +58,22 @@ def get_all_series() -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def get_upcoming_books(limit: int = 3) -> list[dict]:
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT b.title, b.release_date, s.title AS series_title
+            FROM books b
+            JOIN series s ON s.id = b.series_id
+            WHERE b.release_date > date('now')
+            ORDER BY b.release_date ASC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def get_series(series_id: int) -> Optional[dict]:
     with get_connection() as conn:
         row = conn.execute(

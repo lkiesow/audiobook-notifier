@@ -56,6 +56,11 @@ def delete_series(series_id):
     return "", 204
 
 
+@app.get("/api/upcoming")
+def upcoming_books():
+    return jsonify(database.get_upcoming_books())
+
+
 @app.get("/api/series/<int:series_id>/books")
 def get_books(series_id):
     if not database.get_series(series_id):
