@@ -52,7 +52,9 @@
       padding: 2rem 1rem;
     }
 
-    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
+    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: baseline; gap: 1rem; }
+    h1 .signout { margin-left: auto; font-size: 0.75rem; color: var(--color-muted); text-decoration: none; }
+    h1 .signout:hover { color: var(--color-text); }
 
     /* Add form */
     main { max-width: 900px; margin: 0 auto; }
@@ -167,7 +169,7 @@
 </head>
 <body>
   <main>
-    <h1>Audiobook Notifier</h1>
+    <h1>Audiobook Notifier{% if auth_enabled %}<a href="/logout" class="signout">Sign out</a>{% endif %}</h1>
 
     <section id="add-section">
       <h2>Track a new series</h2>
@@ -192,6 +194,6 @@
     <div id="series-container"></div>
   </main>
 
-  <script src="app.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

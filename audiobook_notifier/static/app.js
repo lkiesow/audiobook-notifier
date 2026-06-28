@@ -8,6 +8,7 @@ const refreshingSeries = new Map(); // id → last_scraped_at snapshot
 
 async function apiFetch(path, options = {}) {
   const res = await fetch(path, options);
+  if (res.status === 401) { window.location.href = '/login'; return; }
   if (res.status === 204) return null;
   const text = await res.text();
   const data = text ? JSON.parse(text) : null;

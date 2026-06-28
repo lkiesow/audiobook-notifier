@@ -14,3 +14,7 @@ LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO")
 MATRIX_HOMESERVER: str = os.environ.get("MATRIX_HOMESERVER", "")
 MATRIX_ACCESS_TOKEN: str = os.environ.get("MATRIX_ACCESS_TOKEN", "")
 MATRIX_ROOM_ID: str = os.environ.get("MATRIX_ROOM_ID", "")
+
+AUTH_USERNAME: str = os.environ.get("AUTH_USERNAME", "")
+AUTH_PASSWORD: str = os.environ.get("AUTH_PASSWORD", "")
+SECRET_KEY: str = os.environ.get("SECRET_KEY", "")
