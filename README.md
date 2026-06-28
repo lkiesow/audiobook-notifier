@@ -70,3 +70,11 @@ MATRIX_ROOM_ID=!yourRoomId:example.org
 Two types of notifications are sent:
 - **New book discovered** — when a scrape finds a book that wasn't in the database before
 - **Releasing today** — sent at 09:00 on the day a tracked book is released
+
+## Production
+
+Instead of using the internal web server, which is meant for debugging only, in production, you can run the app using a WSGI server like gunicorn:
+
+```bash
+gunicorn -w 1 --threads 4 -b 127.0.0.1:5000 audiobook_notifier.__main__:app
+```
