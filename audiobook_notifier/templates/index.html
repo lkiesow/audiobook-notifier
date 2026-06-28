@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Audiobook Notifier</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/icon.png" type="image/png">
   <style>
     body { padding: 2rem 1rem; }
 
-    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: baseline; gap: 1rem; }
+    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; }
     h1 .signout { margin-left: auto; font-size: 0.75rem; color: var(--color-muted); text-decoration: none; }
     h1 .signout:hover { color: var(--color-text); }
 
@@ -96,7 +97,11 @@
 </head>
 <body>
   <main>
-    <h1>Audiobook Notifier{% if auth_enabled %}<a href="/logout" class="signout">Sign out</a>{% endif %}</h1>
+    <h1>
+      <img src="/icon.png" alt="" height="32" style="border-radius:4px;flex-shrink:0">
+      Audiobook Notifier
+      {% if auth_enabled %}<a href="/logout" class="signout">Sign out</a>{% endif %}
+    </h1>
 
     <section id="add-section">
       <h2>Track a new series</h2>

@@ -1,4 +1,5 @@
 import getpass
+import os
 import sys
 from urllib.parse import quote
 
@@ -86,10 +87,35 @@ def run_wizard() -> None:
         _die(f"Failed to create room: {e}")
 
     room_id = r.json()["room_id"]
+    encoded_room = quote(room_id, safe="")
     print(f"Room created: {room_id}")
 
+    # Set room avatar
+    icon_path = os.path.join(os.path.dirname(__file__), "static", "icon.png")
+    print("\nUploading room avatar…")
+    try:
+        with open(icon_path, "rb") as f:
+            r = requests.post(
+                f"{homeserver}/_matrix/media/v1/upload",
+                headers={**_headers(access_token), "Content-Type": "image/png"},
+                params={"filename": "icon.png"},
+                data=f,
+                timeout=30,
+            )
+        r.raise_for_status()
+        mxc_uri = r.json()["content_uri"]
+        r = requests.put(
+            f"{homeserver}/_matrix/client/v3/rooms/{encoded_room}/state/m.room.avatar",
+            json={"url": mxc_uri},
+            headers=_headers(access_token),
+            timeout=10,
+        )
+        r.raise_for_status()
+        print("Room avatar set.")
+    except Exception as e:
+        print(f"Warning: could not set room avatar: {e}", file=sys.stderr)
+
     # Step 3: Get current power levels
-    encoded_room = quote(room_id, safe="")
     try:
         r = requests.get(
             f"{homeserver}/_matrix/client/v3/rooms/{encoded_room}/state/m.room.power_levels",
