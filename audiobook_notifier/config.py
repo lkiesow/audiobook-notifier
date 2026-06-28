@@ -16,6 +16,10 @@ MATRIX_ACCESS_TOKEN: str = os.environ.get("MATRIX_ACCESS_TOKEN", "")
 MATRIX_ROOM_ID: str = os.environ.get("MATRIX_ROOM_ID", "")
 NOTIFY_SCRAPE_ERRORS: bool = os.environ.get("NOTIFY_SCRAPE_ERRORS", "").lower() == "true"
 
+MATRIX_MSGTYPE_NEW_BOOK: str = os.environ.get("MATRIX_MSGTYPE_NEW_BOOK", "m.notice")
+MATRIX_MSGTYPE_RELEASING_TODAY: str = os.environ.get("MATRIX_MSGTYPE_RELEASING_TODAY", "m.notice")
+MATRIX_MSGTYPE_SCRAPE_ERROR: str = os.environ.get("MATRIX_MSGTYPE_SCRAPE_ERROR", "m.notice")
+
 AUTH_USERNAME: str = os.environ.get("AUTH_USERNAME", "")
 AUTH_PASSWORD: str = os.environ.get("AUTH_PASSWORD", "")
 SECRET_KEY: str = os.environ.get("SECRET_KEY", "")
