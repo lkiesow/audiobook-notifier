@@ -21,4 +21,5 @@ database.init_db()
 scheduler.start_scheduler()
 atexit.register(scheduler.shutdown_scheduler)
 
-app.run(host=config.HOST, port=config.PORT, use_reloader=False)
+if __name__ == "__main__":
+    app.run(host=config.HOST, port=config.PORT, use_reloader=False)
