@@ -73,3 +73,8 @@ def notify_releasing_today(book_title: str, series_title: str) -> None:
     logger.info("Releasing today: %s in %s", book_title, series_title)
     if _matrix_enabled():
         _send_matrix(f"Releasing today in {series_title}: {book_title}")
+
+
+def notify_scrape_error(series_label: str) -> None:
+    if _matrix_enabled() and config.NOTIFY_SCRAPE_ERRORS:
+        _send_matrix(f"⚠ Scrape failed for {series_label}")
