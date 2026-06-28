@@ -46,6 +46,46 @@ All configuration is done via environment variables or a `.env` file in the proj
 | `MATRIX_HOMESERVER`     |             | Matrix homeserver URL — leave blank to disable notifications
 | `MATRIX_ACCESS_TOKEN`   |             | Matrix bot access token
 | `MATRIX_ROOM_ID`        |             | Room ID (`!abc:example.org`) or alias (`#name:example.org`)
+| `SECRET_KEY`            |             | Secret key for signing session cookies — required when using any form of authentication; an ephemeral key is used if not set (sessions reset on restart)
+| `AUTH_USERNAME`         |             | Username for local authentication — leave blank to disable
+| `AUTH_PASSWORD`         |             | Password for local authentication
+| `OIDC_CLIENT_ID`        |             | OIDC client ID — leave blank to disable OIDC login
+| `OIDC_CLIENT_SECRET`    |             | OIDC client secret
+| `OIDC_ISSUER_URL`       |             | OIDC provider base URL
+| `OIDC_REDIRECT_URI`     |             | Override the OIDC callback URL
+
+## Authentication
+
+The app supports two optional authentication methods. If neither is configured, the UI is accessible without login.
+
+### Local authentication
+
+Set `AUTH_USERNAME` and `AUTH_PASSWORD` to enable a username/password login screen. If both are set, OIDC is ignored.
+
+### OpenID Connect (OIDC)
+
+Set `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, and `OIDC_ISSUER_URL` to enable OIDC login. The provider's discovery document is fetched automatically from `{OIDC_ISSUER_URL}/.well-known/openid-configuration`. Examples:
+
+```env
+# Authentik
+OIDC_ISSUER_URL=https://auth.example.com/application/o/myapp
+
+# Keycloak
+OIDC_ISSUER_URL=https://auth.example.com/realms/myrealm
+
+# Google
+OIDC_ISSUER_URL=https://accounts.google.com
+```
+
+Register `http(s)://your-host/auth/oidc/callback` as the redirect URI with your provider. If the app runs behind a reverse proxy, set `OIDC_REDIRECT_URI` to the public-facing callback URL explicitly.
+
+### SECRET_KEY
+
+Both authentication methods use Flask session cookies. Set `SECRET_KEY` to a stable random value so sessions survive restarts:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
 
 ## Matrix Notifications
 

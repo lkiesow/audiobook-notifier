@@ -47,14 +47,29 @@
 <body id="login">
   <div id="login-card">
     <h1>Audiobook Notifier</h1>
+    {% if error %}
+    <div id="login-error">
+      {% if error == 'provider_unavailable' %}
+        Cannot reach the authentication provider.
+      {% else %}
+        Authentication failed. Please try again.
+      {% endif %}
+    </div>
+    {% if oidc_enabled %}
+    <a href="/auth/oidc/login" style="text-align:center;font-size:0.85rem">Try again</a>
+    {% endif %}
+    {% endif %}
+    {% if local_auth_enabled %}
     <form id="login-form">
       <input type="text" id="username" placeholder="Username" autocomplete="username" required>
       <input type="password" id="password" placeholder="Password" autocomplete="current-password" required>
       <button type="submit">Sign in</button>
     </form>
     <div id="login-error"></div>
+    {% endif %}
   </div>
 
+  {% if local_auth_enabled %}
   <script>
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -84,5 +99,6 @@
       }
     });
   </script>
+  {% endif %}
 </body>
 </html>

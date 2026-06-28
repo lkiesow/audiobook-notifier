@@ -5,7 +5,8 @@ import secrets
 from functools import wraps
 from urllib.parse import urlparse
 
-from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session
+from authlib.integrations.flask_client import OAuth
+from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 
 from audiobook_notifier import config, database, scheduler
 
@@ -15,7 +16,14 @@ app = Flask(
     static_url_path="",
 )
 
-_auth_enabled = bool(config.AUTH_USERNAME and config.AUTH_PASSWORD)
+_local_auth_enabled = bool(config.AUTH_USERNAME and config.AUTH_PASSWORD)
+_oidc_enabled = bool(
+    not _local_auth_enabled
+    and config.OIDC_CLIENT_ID
+    and config.OIDC_CLIENT_SECRET
+    and config.OIDC_ISSUER_URL
+)
+_auth_enabled = _local_auth_enabled or _oidc_enabled
 
 if config.SECRET_KEY:
     app.secret_key = config.SECRET_KEY
@@ -26,6 +34,16 @@ elif _auth_enabled:
     )
 else:
     app.secret_key = secrets.token_hex(32)
+
+oauth = OAuth(app)
+if _oidc_enabled:
+    oauth.register(
+        name="oidc",
+        client_id=config.OIDC_CLIENT_ID,
+        client_secret=config.OIDC_CLIENT_SECRET,
+        server_metadata_url=config.OIDC_ISSUER_URL.rstrip("/") + "/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
 
 
 def login_required(f):
@@ -56,7 +74,40 @@ def index():
 def login_page():
     if not _auth_enabled or session.get("authenticated"):
         return redirect("/")
-    return render_template("login.html")
+    error = request.args.get("error")
+    if _oidc_enabled and not error:
+        return redirect(url_for("oidc_login"))
+    return render_template(
+        "login.html",
+        local_auth_enabled=_local_auth_enabled,
+        oidc_enabled=_oidc_enabled,
+        error=error,
+    )
+
+
+@app.get("/auth/oidc/login")
+def oidc_login():
+    if not _oidc_enabled:
+        return redirect("/login")
+    try:
+        redirect_uri = url_for("oidc_callback", _external=True)
+        return oauth.oidc.authorize_redirect(redirect_uri)
+    except Exception:
+        logging.getLogger(__name__).warning("OIDC provider unavailable", exc_info=True)
+        return redirect("/login?error=provider_unavailable")
+
+
+@app.get("/auth/oidc/callback")
+def oidc_callback():
+    if not _oidc_enabled:
+        return redirect("/")
+    try:
+        oauth.oidc.authorize_access_token()
+    except Exception:
+        logging.getLogger(__name__).warning("OIDC callback failed", exc_info=True)
+        return redirect("/login?error=oidc_failed")
+    session["authenticated"] = True
+    return redirect("/")
 
 
 @app.post("/api/auth/login")

@@ -18,3 +18,8 @@ MATRIX_ROOM_ID: str = os.environ.get("MATRIX_ROOM_ID", "")
 AUTH_USERNAME: str = os.environ.get("AUTH_USERNAME", "")
 AUTH_PASSWORD: str = os.environ.get("AUTH_PASSWORD", "")
 SECRET_KEY: str = os.environ.get("SECRET_KEY", "")
+
+OIDC_CLIENT_ID: str = os.environ.get("OIDC_CLIENT_ID", "")
+OIDC_CLIENT_SECRET: str = os.environ.get("OIDC_CLIENT_SECRET", "")
+OIDC_ISSUER_URL: str = os.environ.get("OIDC_ISSUER_URL", "")
+OIDC_REDIRECT_URI: str = os.environ.get("OIDC_REDIRECT_URI", "")
