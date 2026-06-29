@@ -25,6 +25,20 @@ last_scrape_timestamp_seconds = Gauge(
 
 
 class _DatabaseStatsCollector:
+    def describe(self):
+        yield GaugeMetricFamily(
+            "audiobook_notifier_tracked_series",
+            "Number of series currently tracked",
+        )
+        yield GaugeMetricFamily(
+            "audiobook_notifier_tracked_books",
+            "Total books in the database",
+        )
+        yield GaugeMetricFamily(
+            "audiobook_notifier_upcoming_books",
+            "Books with a future release date",
+        )
+
     def collect(self):
         from audiobook_notifier import database  # deferred to avoid circular import
 
