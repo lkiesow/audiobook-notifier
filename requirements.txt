@@ -4,3 +4,4 @@ beautifulsoup4
 apscheduler
 python-dotenv
 authlib
+prometheus_client

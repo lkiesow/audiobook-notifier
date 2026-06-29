@@ -8,7 +8,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
-from audiobook_notifier import config, database, notifications, scraper
+from audiobook_notifier import config, database, metrics, notifications, scraper
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,7 @@ def scrape_and_update(series_id: int) -> bool:
     if result is None:
         logger.error("Failed to scrape series %d (%s)", series_id, series["url"])
         notifications.notify_scrape_error(series["title"] or series["url"])
+        metrics.scrapes_total.labels(result="error").inc()
         return False
 
     books = result["books"]
@@ -35,6 +36,7 @@ def scrape_and_update(series_id: int) -> bool:
             series["url"],
         )
         notifications.notify_scrape_error(series["title"] or series["url"])
+        metrics.scrapes_total.labels(result="error").inc()
         return False
 
     existing_asins = database.get_existing_asins(series_id)
@@ -46,6 +48,7 @@ def scrape_and_update(series_id: int) -> bool:
         if asin not in existing_asins:
             try:
                 database.insert_book(series_id, book)
+                metrics.new_books_discovered_total.inc()
                 if series["last_scraped_at"] is not None:
                     notifications.notify_new_book(book["title"], result["series_title"])
             except sqlite3.IntegrityError:
@@ -60,6 +63,7 @@ def scrape_and_update(series_id: int) -> bool:
         result["series_title"],
         datetime.now(timezone.utc).isoformat(),
     )
+    metrics.scrapes_total.labels(result="success").inc()
     return True
 
 
@@ -71,6 +75,7 @@ def scrape_all_series() -> None:
         if i < len(series_list) - 1:
             time.sleep(config.SCRAPE_DELAY_SECONDS)
     logger.info("Scheduled scrape complete")
+    metrics.last_scrape_timestamp_seconds.set(time.time())
 
 
 def check_releasing_today() -> None:

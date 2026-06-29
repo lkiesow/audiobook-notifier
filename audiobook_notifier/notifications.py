@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 import requests
 
-from audiobook_notifier import config
+from audiobook_notifier import config, metrics
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,7 @@ def notify_new_book(book_title: str, series_title: str) -> None:
             f"New audiobook in {series_title}: {book_title}",
             config.MATRIX_MSGTYPE_NEW_BOOK,
         )
+        metrics.notifications_sent_total.labels(type="new_book").inc()
 
 
 def notify_releasing_today(book_title: str, series_title: str) -> None:
@@ -79,6 +80,7 @@ def notify_releasing_today(book_title: str, series_title: str) -> None:
             f"Releasing today in {series_title}: {book_title}",
             config.MATRIX_MSGTYPE_RELEASING_TODAY,
         )
+        metrics.notifications_sent_total.labels(type="releasing_today").inc()
 
 
 def notify_scrape_error(series_label: str) -> None:
@@ -87,3 +89,4 @@ def notify_scrape_error(series_label: str) -> None:
             f"⚠ Scrape failed for {series_label}",
             config.MATRIX_MSGTYPE_SCRAPE_ERROR,
         )
+        metrics.notifications_sent_total.labels(type="scrape_error").inc()

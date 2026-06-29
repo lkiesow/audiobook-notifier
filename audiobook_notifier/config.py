@@ -28,3 +28,6 @@ OIDC_CLIENT_ID: str = os.environ.get("OIDC_CLIENT_ID", "")
 OIDC_CLIENT_SECRET: str = os.environ.get("OIDC_CLIENT_SECRET", "")
 OIDC_ISSUER_URL: str = os.environ.get("OIDC_ISSUER_URL", "")
 OIDC_REDIRECT_URI: str = os.environ.get("OIDC_REDIRECT_URI", "")
+
+METRICS_BASIC_AUTH_USER: str = os.environ.get("METRICS_BASIC_AUTH_USER", "")
+METRICS_BASIC_AUTH_PASS: str = os.environ.get("METRICS_BASIC_AUTH_PASS", "")

@@ -35,24 +35,26 @@ The web UI is available at `http://localhost:5000` by default.
 
 All configuration is done via environment variables or a `.env` file in the project root.
 
-| Variable                | Default     | Description
-|-------------------------|-------------|------------------
-| `DATABASE_PATH`         | `data.db`   | Path to the SQLite database file
-| `SCRAPE_INTERVAL_HOURS` | `24`        | How often (in hours) to re-scrape all tracked series
-| `SCRAPE_DELAY_SECONDS`  | `60`        | Delay between scraping consecutive series (rate limiting)
-| `HOST`                  | `127.0.0.1` | Host for the Flask web server
-| `PORT`                  | `5000`      | Port for the Flask web server
-| `LOG_LEVEL`             | `INFO`      | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
-| `MATRIX_HOMESERVER`     |             | Matrix homeserver URL — leave blank to disable notifications
-| `MATRIX_ACCESS_TOKEN`   |             | Matrix bot access token
-| `MATRIX_ROOM_ID`        |             | Room ID (`!abc:example.org`) or alias (`#name:example.org`)
-| `SECRET_KEY`            |             | Secret key for signing session cookies — required when using any form of authentication; an ephemeral key is used if not set (sessions reset on restart)
-| `AUTH_USERNAME`         |             | Username for local authentication — leave blank to disable
-| `AUTH_PASSWORD`         |             | Password for local authentication
-| `OIDC_CLIENT_ID`        |             | OIDC client ID — leave blank to disable OIDC login
-| `OIDC_CLIENT_SECRET`    |             | OIDC client secret
-| `OIDC_ISSUER_URL`       |             | OIDC provider base URL
-| `OIDC_REDIRECT_URI`     |             | Override the OIDC callback URL
+| Variable                   | Default     | Description
+|----------------------------|-------------|------------------
+| `DATABASE_PATH`            | `data.db`   | Path to the SQLite database file
+| `SCRAPE_INTERVAL_HOURS`    | `24`        | How often (in hours) to re-scrape all tracked series
+| `SCRAPE_DELAY_SECONDS`     | `60`        | Delay between scraping consecutive series (rate limiting)
+| `HOST`                     | `127.0.0.1` | Host for the Flask web server
+| `PORT`                     | `5000`      | Port for the Flask web server
+| `LOG_LEVEL`                | `INFO`      | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+| `MATRIX_HOMESERVER`        |             | Matrix homeserver URL — leave blank to disable notifications
+| `MATRIX_ACCESS_TOKEN`      |             | Matrix bot access token
+| `MATRIX_ROOM_ID`           |             | Room ID (`!abc:example.org`) or alias (`#name:example.org`)
+| `SECRET_KEY`               |             | Secret key for signing session cookies — required when using any form of authentication; an ephemeral key is used if not set (sessions reset on restart)
+| `AUTH_USERNAME`            |             | Username for local authentication — leave blank to disable
+| `AUTH_PASSWORD`            |             | Password for local authentication
+| `OIDC_CLIENT_ID`           |             | OIDC client ID — leave blank to disable OIDC login
+| `OIDC_CLIENT_SECRET`       |             | OIDC client secret
+| `OIDC_ISSUER_URL`          |             | OIDC provider base URL
+| `OIDC_REDIRECT_URI`        |             | Override the OIDC callback URL
+| `METRICS_BASIC_AUTH_USER`  |             | Username for Basic Auth on `/metrics` — leave blank to keep endpoint open
+| `METRICS_BASIC_AUTH_PASS`  |             | Password for Basic Auth on `/metrics`
 
 ## Authentication
 

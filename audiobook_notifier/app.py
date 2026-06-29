@@ -8,7 +8,10 @@ from urllib.parse import urlparse
 from authlib.integrations.flask_client import OAuth
 from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 
-from audiobook_notifier import config, database, scheduler
+from prometheus_client import REGISTRY
+from prometheus_client.openmetrics.exposition import CONTENT_TYPE_LATEST, generate_latest
+
+from audiobook_notifier import config, database, metrics, scheduler
 
 app = Flask(
     __name__,
@@ -188,3 +191,16 @@ def refresh_series(series_id):
         return jsonify({"error": "Not found"}), 404
     scheduler.scrape_series_now(series_id)
     return jsonify({"status": "refresh started"}), 202
+
+
+@app.get("/metrics")
+def metrics_endpoint():
+    if config.METRICS_BASIC_AUTH_USER and config.METRICS_BASIC_AUTH_PASS:
+        auth = request.authorization
+        if (
+            not auth
+            or not hmac.compare_digest(auth.username, config.METRICS_BASIC_AUTH_USER)
+            or not hmac.compare_digest(auth.password, config.METRICS_BASIC_AUTH_PASS)
+        ):
+            return "Unauthorized", 401, {"WWW-Authenticate": 'Basic realm="metrics"'}
+    return generate_latest(REGISTRY), 200, {"Content-Type": CONTENT_TYPE_LATEST}
