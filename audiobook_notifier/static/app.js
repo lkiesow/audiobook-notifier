@@ -112,8 +112,13 @@ function renderSeries(seriesList) {
             <span class="series-title${titleClass}">${displayTitle}</span>
             <span class="series-meta" data-scraped-at="${s.last_scraped_at || ''}">${bookCount} book${bookCount !== 1 ? 's' : ''} · scraped ${formatScraped(s.last_scraped_at)}</span>
           </div>
-          <button data-action="refresh" title="Refresh">↻</button>
-          <button class="danger" data-action="delete" title="Untrack">✕</button>
+          <div class="series-menu-wrap">
+            <button class="menu-btn" data-action="menu" title="Actions">⋮</button>
+            <div class="series-menu">
+              <button data-action="refresh"><span class="menu-icon">↻</span>Refresh</button>
+              <button class="danger" data-action="delete"><span class="menu-icon">✕</span>Untrack</button>
+            </div>
+          </div>
         </div>
         <div class="books-container${isOpen}" data-books-loaded="${isOpen ? 'true' : 'false'}"></div>
       </div>`;
@@ -337,6 +342,11 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
 
 document.getElementById('series-container').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-action]');
+
+  const menuEl = btn?.closest('.series-menu-wrap')?.querySelector('.series-menu');
+  const wasOpen = menuEl?.classList.contains('open') ?? false;
+  document.querySelectorAll('.series-menu.open').forEach(m => m.classList.remove('open'));
+
   if (!btn) return;
 
   const card = btn.closest('[data-series-id]');
@@ -344,16 +354,24 @@ document.getElementById('series-container').addEventListener('click', async (e) 
   const seriesId = parseInt(card.dataset.seriesId, 10);
   const action = btn.dataset.action;
 
-  if (action === 'delete') {
+  if (action === 'menu') {
+    e.stopPropagation();
+    if (!wasOpen) menuEl.classList.add('open');
+  } else if (action === 'delete') {
     e.stopPropagation();
     await deleteSeries(seriesId);
   } else if (action === 'refresh') {
     e.stopPropagation();
-    await refreshSeries(btn, seriesId);
+    const menuBtn = card.querySelector('[data-action="menu"]');
+    await refreshSeries(menuBtn, seriesId);
   } else if (action === 'toggle') {
     const booksEl = card.querySelector('.books-container');
     await toggleBooks(seriesId, booksEl);
   }
+});
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.series-menu.open').forEach(m => m.classList.remove('open'));
 });
 
 // --- Init ---

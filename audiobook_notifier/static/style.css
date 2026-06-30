@@ -70,3 +70,50 @@ input {
 
 a { color: inherit; text-decoration-color: var(--color-muted); }
 a:hover { text-decoration-color: var(--color-text); }
+
+.series-menu-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.menu-btn {
+  min-width: 2rem;
+  aspect-ratio: 1;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.series-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 10;
+  min-width: 130px;
+  flex-direction: column;
+  overflow: hidden;
+}
+.series-menu.open {
+  display: flex;
+}
+.series-menu button {
+  border: none;
+  border-radius: 0;
+  text-align: left;
+  padding: 0.7rem 1rem;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.menu-icon {
+  display: inline-block;
+  width: 1.6rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+.series-menu button:not(:last-child) {
+  border-bottom: 1px solid var(--border-divider);
+}
