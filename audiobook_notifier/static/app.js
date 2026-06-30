@@ -92,7 +92,17 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+function updateSeriesStats(seriesList) {
+  const heading = document.getElementById('series-heading');
+  const statsEl = document.getElementById('series-stats');
+  if (!seriesList.length) { heading.style.display = 'none'; return; }
+  const bookCount = seriesList.reduce((sum, s) => sum + (s.book_count ?? 0), 0);
+  statsEl.textContent = `${seriesList.length} series · ${bookCount} book${bookCount !== 1 ? 's' : ''}`;
+  heading.style.display = '';
+}
+
 function renderSeries(seriesList) {
+  updateSeriesStats(seriesList);
   const container = document.getElementById('series-container');
   if (!seriesList.length) {
     container.innerHTML = '<p style="color:#888;font-size:.9rem">No series tracked yet.</p>';
@@ -206,6 +216,8 @@ function patchSeries(seriesList) {
       metaEl.dataset.scrapedAt = s.last_scraped_at || '';
     }
   }
+
+  updateSeriesStats(seriesList);
 
   // If any previously-pending series just acquired a title, refresh upcoming
   if (seriesList.some(s => pendingBefore.has(s.id) && s.title)) {

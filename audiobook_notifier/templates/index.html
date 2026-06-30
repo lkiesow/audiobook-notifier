@@ -84,6 +84,10 @@
     .cover-thumb { display: block; width: 40px; height: 40px; object-fit: cover; border-radius: 3px; }
     #upcoming-list .cover-thumb { width: 44px; height: 44px; border-radius: 4px; flex-shrink: 0; }
 
+    #series-heading { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 0.75rem; }
+    #series-heading h2 { font-size: 1rem; }
+    #series-stats { font-size: 0.78rem; color: var(--color-meta); margin-left: auto; }
+
     .empty-state { padding: 1rem; color: var(--color-muted); font-size: 0.85rem; }
 
     #loading { color: var(--color-muted); font-size: 0.9rem; }
@@ -123,6 +127,10 @@
       <ul id="upcoming-list"></ul>
     </section>
 
+    <div id="series-heading" style="display:none">
+      <h2>Tracked series</h2>
+      <span id="series-stats"></span>
+    </div>
     <div id="loading">Loading…</div>
     <div id="series-container"></div>
   </main>
