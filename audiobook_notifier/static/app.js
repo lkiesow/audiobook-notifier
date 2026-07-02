@@ -44,11 +44,11 @@ function renderBooks(books, containerEl) {
   const rows = books.map(b => `
     <tr>
       <td class="col-cover">${coverThumb(b.cover_image_url, b.title, 80)}</td>
-      <td>${b.book_url ? `<a href="${escHtml(b.book_url)}" target="_blank" rel="noopener noreferrer">${escHtml(b.title || '—')}</a>` : escHtml(b.title || '—')}</td>
-      <td>${escHtml(b.author || '—')}</td>
+      <td class="col-title">${b.book_url ? `<a href="${escHtml(b.book_url)}" target="_blank" rel="noopener noreferrer">${escHtml(b.title || '—')}</a>` : escHtml(b.title || '—')}</td>
+      <td class="col-author">${escHtml(b.author || '—')}</td>
       <td class="col-narrator">${escHtml(b.narrator || '—')}</td>
       <td class="col-duration">${escHtml(b.duration || '—')}</td>
-      <td>${formatDate(b.release_date)}</td>
+      <td class="col-release">${formatDate(b.release_date)}</td>
       <td class="col-language">${escHtml(b.language || '—')}</td>
     </tr>`).join('');
   containerEl.innerHTML = `
