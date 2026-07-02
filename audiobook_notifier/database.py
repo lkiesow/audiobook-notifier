@@ -145,8 +145,11 @@ def insert_book(series_id: int, book: dict) -> None:
             """
             INSERT INTO books
                 (series_id, asin, title, subtitle, author, narrator,
-                 duration, release_date, language, book_url, cover_image_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 duration, release_date, language, book_url, cover_image_url,
+                 release_notified_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                CASE WHEN ? IS NOT NULL AND ? <= date('now')
+                     THEN datetime('now') ELSE NULL END)
             """,
             (
                 series_id,
@@ -160,6 +163,8 @@ def insert_book(series_id: int, book: dict) -> None:
                 book["language"],
                 book["book_url"],
                 book.get("cover_image_url"),
+                book["release_date"],
+                book["release_date"],
             ),
         )
 
