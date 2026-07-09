@@ -12,7 +12,7 @@ from audiobook_notifier import config, database, metrics, notifications, scraper
 
 logger = logging.getLogger(__name__)
 
-_scheduler = BackgroundScheduler()
+_scheduler = BackgroundScheduler(job_defaults={"misfire_grace_time": 3600})
 
 
 def scrape_and_update(series_id: int) -> bool:
@@ -80,6 +80,7 @@ def scrape_all_series() -> None:
 
 def check_releasing_today() -> None:
     books = database.get_books_releasing_today()
+    logger.info("Release check found %d book(s) releasing", len(books))
     for book in books:
         notifications.notify_releasing_today(book["title"], book["series_title"])
         database.mark_release_notified(book["asin"])
