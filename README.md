@@ -8,7 +8,7 @@ A self-hosted web app that tracks Audible audiobook series and notifies you when
 
 - Track any number of Audible series (audible.com and audible.de supported)
 - Background scraping on a configurable interval (default: every 24 hours)
-- Daily release-day notifications at 09:00
+- Daily release-day notifications (09:00 local time by default, configurable)
 - Upcoming releases panel in the web UI
 - Matrix notifications (optional) — with a setup wizard to create a bot room
 - Light/dark mode web UI
@@ -35,11 +35,15 @@ The web UI is available at `http://localhost:5000` by default.
 
 All configuration is done via environment variables or a `.env` file in the project root.
 
+`RELEASE_CHECK_HOUR`/`RELEASE_CHECK_MINUTE` are interpreted in the container's local timezone. Set the standard `TZ` environment variable (e.g. `TZ=Europe/Berlin`) to control what "local time" means; without it, the check runs in the container's default timezone (UTC).
+
 | Variable                   | Default     | Description
 |----------------------------|-------------|------------------
 | `DATABASE_PATH`            | `data.db`   | Path to the SQLite database file
 | `SCRAPE_INTERVAL_HOURS`    | `24`        | How often (in hours) to re-scrape all tracked series
 | `SCRAPE_DELAY_SECONDS`     | `60`        | Delay between scraping consecutive series (rate limiting)
+| `RELEASE_CHECK_HOUR`       | `9`         | Hour (0-23, in the container's local time) to run the daily release check
+| `RELEASE_CHECK_MINUTE`     | `0`         | Minute (0-59) to run the daily release check
 | `HOST`                     | `127.0.0.1` | Host for the Flask web server
 | `PORT`                     | `5000`      | Port for the Flask web server
 | `LOG_LEVEL`                | `INFO`      | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)

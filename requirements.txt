@@ -2,6 +2,7 @@ flask
 requests
 beautifulsoup4
 apscheduler
+tzdata
 python-dotenv
 authlib
 prometheus_client

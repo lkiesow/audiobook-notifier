@@ -106,7 +106,7 @@ def start_scheduler() -> None:
     )
     _scheduler.add_job(
         check_releasing_today,
-        trigger=CronTrigger(hour=9, minute=0),
+        trigger=CronTrigger(hour=config.RELEASE_CHECK_HOUR, minute=config.RELEASE_CHECK_MINUTE),
         id="check_releasing",
         coalesce=True,
         max_instances=1,
@@ -121,8 +121,10 @@ def start_scheduler() -> None:
     )
     _scheduler.start()
     logger.info(
-        "Scheduler started (scrape every %dh, release check daily at 09:00)",
+        "Scheduler started (scrape every %dh, release check daily at %02d:%02d)",
         config.SCRAPE_INTERVAL_HOURS,
+        config.RELEASE_CHECK_HOUR,
+        config.RELEASE_CHECK_MINUTE,
     )
 
 
