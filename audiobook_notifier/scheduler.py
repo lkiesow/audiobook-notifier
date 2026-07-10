@@ -111,6 +111,14 @@ def start_scheduler() -> None:
         coalesce=True,
         max_instances=1,
     )
+    # Catch up immediately on any release that came due while the process was
+    # down or during a missed 09:00 slot — an in-memory cron never fires
+    # retroactively. Safe to run every start: it only notifies books that are
+    # past-release AND not yet notified, then marks them.
+    _scheduler.add_job(
+        check_releasing_today,
+        id="check_releasing_startup",
+    )
     _scheduler.start()
     logger.info(
         "Scheduler started (scrape every %dh, release check daily at 09:00)",
