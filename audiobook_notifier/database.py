@@ -85,6 +85,20 @@ def get_upcoming_books(limit: int = 3) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def get_todays_books() -> list[dict]:
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT b.title, b.release_date, b.cover_image_url, b.book_url, s.title AS series_title
+            FROM books b
+            JOIN series s ON s.id = b.series_id
+            WHERE b.release_date = date('now')
+            ORDER BY s.title ASC
+            """
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def get_series(series_id: int) -> Optional[dict]:
     with get_connection() as conn:
         row = conn.execute(
@@ -194,7 +208,7 @@ def update_book(asin: str, book: dict) -> None:
         )
 
 
-def get_books_releasing_today() -> list[dict]:
+def get_unnotified_books() -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
             """

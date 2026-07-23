@@ -176,6 +176,12 @@ def upcoming_books():
     return jsonify(database.get_upcoming_books())
 
 
+@app.get("/api/releases-today")
+@login_required
+def releases_today():
+    return jsonify(database.get_todays_books())
+
+
 @app.get("/api/series/<int:series_id>/books")
 @login_required
 def get_books(series_id):

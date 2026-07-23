@@ -15,32 +15,25 @@
 
     main { max-width: 900px; margin: 0 auto; }
 
-    #add-section {
+    .panel {
       background: var(--bg-card);
       border: 1px solid var(--border-card);
       border-radius: 6px;
       padding: 1rem 1.25rem;
       margin-bottom: 1.5rem;
     }
-    #add-section h2 { font-size: 1rem; margin-bottom: 0.75rem; }
+    .panel h2 { font-size: 1rem; margin-bottom: 0.75rem; }
+
     #add-form { display: flex; gap: 0.5rem; }
     #url-input { flex: 1; }
-
     #add-error { color: var(--color-danger); font-size: 0.85rem; margin-top: 0.5rem; }
 
-    #upcoming-section {
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
-      border-radius: 6px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
-    }
-    #upcoming-section h2 { font-size: 1rem; margin-bottom: 0.75rem; }
-    #upcoming-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
-    #upcoming-list li { font-size: 0.88rem; display: flex; align-items: center; gap: 0.75rem; }
-    #upcoming-list .upcoming-text { display: flex; flex-direction: column; gap: 0.15rem; }
+    .book-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+    .book-list li { font-size: 0.88rem; display: flex; align-items: center; gap: 0.75rem; }
+    .book-list .cover-thumb { width: 44px; height: 44px; border-radius: 4px; flex-shrink: 0; }
+    .book-list .upcoming-text { display: flex; flex-direction: column; gap: 0.15rem; }
+    .book-list .upcoming-series { color: var(--color-muted); }
     #upcoming-list .upcoming-date { color: var(--color-meta); }
-    #upcoming-list .upcoming-series { color: var(--color-muted); }
 
     #series-container { display: flex; flex-direction: column; gap: 1rem; }
 
@@ -143,7 +136,7 @@
       {% if auth_enabled %}<a href="/logout" class="signout">Sign out</a>{% endif %}
     </h1>
 
-    <section id="add-section">
+    <section id="add-section" class="panel">
       <h2>Track a new series</h2>
       <form id="add-form">
         <input
@@ -157,9 +150,14 @@
       <div id="add-error"></div>
     </section>
 
-    <section id="upcoming-section" style="display:none">
+    <section id="today-section" class="panel" style="display:none">
+      <h2>Out today</h2>
+      <ul id="today-list" class="book-list"></ul>
+    </section>
+
+    <section id="upcoming-section" class="panel" style="display:none">
       <h2>Upcoming releases</h2>
-      <ul id="upcoming-list"></ul>
+      <ul id="upcoming-list" class="book-list"></ul>
     </section>
 
     <div id="series-heading" style="display:none">

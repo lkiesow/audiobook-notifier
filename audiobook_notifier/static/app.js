@@ -222,6 +222,7 @@ function patchSeries(seriesList) {
   // If any previously-pending series just acquired a title, refresh upcoming
   if (seriesList.some(s => pendingBefore.has(s.id) && s.title)) {
     loadUpcoming();
+    loadToday();
   }
 
   // Detect completed refreshes: reload books for open cards whose timestamp changed
@@ -229,6 +230,7 @@ function patchSeries(seriesList) {
     if (refreshingSeries.has(s.id) && s.last_scraped_at !== refreshingSeries.get(s.id)) {
       refreshingSeries.delete(s.id);
       loadUpcoming();
+      loadToday();
       if (expandedSeries.has(s.id)) {
         const card = container.querySelector(`[data-series-id="${s.id}"]`);
         if (card) loadBooks(s.id, card.querySelector('.books-container'));
@@ -256,6 +258,25 @@ async function loadUpcoming() {
       ${coverThumb(b.cover_image_url, b.title, 160)}
       <div class="upcoming-text">
         <span class="upcoming-date">${formatDate(b.release_date)}</span>
+        ${b.book_url ? `<a href="${escHtml(b.book_url)}" target="_blank" rel="noopener noreferrer">${escHtml(b.title)}</a>` : escHtml(b.title)}
+        <span class="upcoming-series">— ${escHtml(b.series_title)}</span>
+      </div>
+    </li>`).join('');
+  section.style.display = '';
+}
+
+async function loadToday() {
+  const data = await apiFetch('/api/releases-today');
+  const section = document.getElementById('today-section');
+  const list = document.getElementById('today-list');
+  if (!data.length) {
+    section.style.display = 'none';
+    return;
+  }
+  list.innerHTML = data.map(b => `
+    <li>
+      ${coverThumb(b.cover_image_url, b.title, 160)}
+      <div class="upcoming-text">
         ${b.book_url ? `<a href="${escHtml(b.book_url)}" target="_blank" rel="noopener noreferrer">${escHtml(b.title)}</a>` : escHtml(b.title)}
         <span class="upcoming-series">— ${escHtml(b.series_title)}</span>
       </div>
@@ -301,7 +322,7 @@ async function deleteSeries(seriesId) {
   if (!confirm('Stop tracking this series?')) return;
   await apiFetch(`/api/series/${seriesId}`, { method: 'DELETE' });
   expandedSeries.delete(seriesId);
-  await Promise.all([loadSeries(), loadUpcoming()]);
+  await Promise.all([loadSeries(), loadUpcoming(), loadToday()]);
 }
 
 async function refreshSeries(btn, seriesId) {
@@ -342,7 +363,7 @@ document.getElementById('add-form').addEventListener('submit', async (e) => {
       body: JSON.stringify({ url: input.value.trim() }),
     });
     input.value = '';
-    await Promise.all([loadSeries(), loadUpcoming()]);
+    await Promise.all([loadSeries(), loadUpcoming(), loadToday()]);
   } catch (err) {
     errorEl.textContent = err.status === 409 ? 'This series is already being tracked.' : (err.message || 'Something went wrong.');
   } finally {
@@ -390,3 +411,4 @@ document.addEventListener('click', () => {
 
 loadSeries();
 loadUpcoming();
+loadToday();

@@ -79,7 +79,7 @@ def scrape_all_series() -> None:
 
 
 def check_releasing_today() -> None:
-    books = database.get_books_releasing_today()
+    books = database.get_unnotified_books()
     logger.info("Release check found %d book(s) releasing", len(books))
     for book in books:
         notifications.notify_releasing_today(book["title"], book["series_title"])
