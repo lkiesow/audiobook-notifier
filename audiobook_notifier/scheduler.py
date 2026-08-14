@@ -44,16 +44,11 @@ def scrape_and_update(series_id: int) -> bool:
         return False
 
     result = scraper.scrape_series(series["url"])
-    if result is None:
-        logger.error("Failed to scrape series %d (%s)", series_id, series["url"])
-        notifications.notify_scrape_error(series["title"] or series["url"])
-        metrics.scrapes_total.labels(result="error").inc()
-        return False
-
-    books = result["books"]
-    if not books:
+    if not result or not result["books"]:
+        # scrape_series already retried and logged why. Skip the update
+        # entirely rather than writing a half-scraped page over good data.
         logger.error(
-            "Scraper returned no books for series %d (%s); skipping update to avoid data loss",
+            "Failed to scrape series %d (%s); skipping update to avoid data loss",
             series_id,
             series["url"],
         )
@@ -61,6 +56,7 @@ def scrape_and_update(series_id: int) -> bool:
         metrics.scrapes_total.labels(result="error").inc()
         return False
 
+    books = result["books"]
     existing = database.get_existing_books(series_id)
 
     for book in books:

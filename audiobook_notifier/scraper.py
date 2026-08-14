@@ -1,12 +1,15 @@
 import itertools
 import logging
 import re
+import time
 from datetime import datetime
 from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
+
+from audiobook_notifier import config
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +38,9 @@ _ua_cycle = itertools.cycle(_USER_AGENTS)
 def fetch_page(url: str) -> Optional[str]:
     try:
         response = requests.get(
-            url, headers={"User-Agent": next(_ua_cycle)}, timeout=30
+            url,
+            headers={"User-Agent": next(_ua_cycle)},
+            timeout=config.SCRAPE_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
         logger.debug("Fetched URL: %s", response.url)
@@ -188,12 +193,61 @@ def extract_books(soup: BeautifulSoup, base_url: str) -> list[dict]:
     return [extract_book_info(item, base_url) for item in items]
 
 
-def scrape_series(url: str) -> Optional[dict]:
+def uses_unsupported_layout(soup: BeautifulSoup) -> bool:
+    """True for Audible's web-component series page, which we cannot parse.
+
+    Audible serves this layout for a fraction of requests. It lists the same
+    titles as <adbl-product-row> instead of <li class="productListItem">, and
+    carries no release dates at all, so there is nothing to parse — the only
+    thing to do is ask again and hope for the classic layout.
+    """
+    return bool(soup.find("adbl-product-row"))
+
+
+def _scrape_once(url: str) -> Optional[dict]:
     html = fetch_page(url)
     if not html:
         return None
     soup = BeautifulSoup(html, "html.parser")
+    books = extract_books(soup, url)
+    if not books:
+        if uses_unsupported_layout(soup):
+            logger.warning("Got Audible's unsupported new layout for %s", url)
+        else:
+            logger.warning("No books found on %s", url)
+        return None
     return {
         "series_title": extract_series_title(soup),
-        "books": extract_books(soup, url),
+        "books": books,
     }
+
+
+def scrape_series(url: str) -> Optional[dict]:
+    """Scrape a series page, retrying the whole fetch and parse.
+
+    Retrying the request alone is not enough: most failures come back as a
+    perfectly healthy HTTP 200 that we cannot parse, and which layout Audible
+    serves varies per request. Each attempt gets a fresh User-Agent and no
+    shared cookie jar, so attempts stay independent.
+    """
+    attempts = max(1, config.SCRAPE_RETRY_ATTEMPTS)
+    for attempt in range(1, attempts + 1):
+        result = _scrape_once(url)
+        if result:
+            if attempt > 1:
+                logger.info("Scraped %s on attempt %d/%d", url, attempt, attempts)
+            return result
+        if attempt < attempts:
+            # Capped: the usual failure is a coin-flip over which layout we
+            # get, not a rate limit, so waiting longer buys nothing.
+            delay = min(
+                config.SCRAPE_RETRY_BACKOFF_SECONDS * 2 ** (attempt - 1),
+                config.SCRAPE_RETRY_MAX_BACKOFF_SECONDS,
+            )
+            logger.info(
+                "Retrying %s in %.0fs (attempt %d/%d failed)",
+                url, delay, attempt, attempts,
+            )
+            time.sleep(delay)
+    logger.error("Giving up on %s after %d attempts", url, attempts)
+    return None
