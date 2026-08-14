@@ -105,8 +105,11 @@ def check_releasing_today() -> None:
     books = database.get_unnotified_books()
     logger.info("Release check found %d book(s) releasing", len(books))
     for book in books:
-        notifications.notify_releasing_today(book["title"], book["series_title"])
-        database.mark_release_notified(book["asin"])
+        # Only stamp on success. The books table doubles as the outbox:
+        # release_notified_at IS NULL means "still owed", and the daily cron
+        # plus the startup catch-up job redeliver it.
+        if notifications.notify_releasing_today(book["title"], book["series_title"]):
+            database.mark_release_notified(book["asin"])
 
 
 def scrape_series_now(series_id: int) -> None:

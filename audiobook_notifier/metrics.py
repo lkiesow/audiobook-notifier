@@ -18,6 +18,12 @@ notifications_sent_total = Counter(
     ["type"],
 )
 
+notifications_failed_total = Counter(
+    "audiobook_notifier_notifications_failed_total",
+    "Total Matrix notifications that could not be delivered, by type",
+    ["type"],
+)
+
 last_scrape_timestamp_seconds = Gauge(
     "audiobook_notifier_last_scrape_timestamp_seconds",
     "Unix timestamp of the most recent completed scheduled scrape run",

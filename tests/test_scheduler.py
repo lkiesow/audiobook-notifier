@@ -6,19 +6,20 @@ from tests.conftest import make_book
 
 @pytest.fixture
 def sent(monkeypatch):
-    """Capture notifications instead of sending them."""
-    calls = {"postponed": [], "new_book": [], "releasing_today": []}
+    """Capture notifications instead of sending them. Delivery succeeds."""
+    # Flip calls["delivered"] to simulate Matrix being unreachable.
+    calls = {"postponed": [], "new_book": [], "releasing_today": [], "delivered": True}
+
+    def record(kind):
+        def capture(*args):
+            calls[kind].append(args)
+            return calls["delivered"]
+        return capture
+
+    monkeypatch.setattr(notifications, "notify_release_postponed", record("postponed"))
+    monkeypatch.setattr(notifications, "notify_new_book", record("new_book"))
     monkeypatch.setattr(
-        notifications, "notify_release_postponed",
-        lambda *a: calls["postponed"].append(a),
-    )
-    monkeypatch.setattr(
-        notifications, "notify_new_book",
-        lambda *a: calls["new_book"].append(a),
-    )
-    monkeypatch.setattr(
-        notifications, "notify_releasing_today",
-        lambda *a: calls["releasing_today"].append(a),
+        notifications, "notify_releasing_today", record("releasing_today")
     )
     return calls
 
@@ -116,3 +117,18 @@ def test_check_releasing_today_announces_and_stamps(db, series_id, sent):
 
     assert sent["releasing_today"] == [("Test Book 1", "Test Series")]
     assert notified_at(db, "B0TEST0001") is not None
+
+
+def test_undelivered_release_stays_queued_for_the_next_check(db, series_id, sent):
+    """A lost message must not consume the flag — the books table is the outbox."""
+    db.insert_book(series_id, make_book(release_date="2020-01-01"))
+    db.clear_release_notified("B0TEST0001")
+    sent["delivered"] = False
+
+    scheduler.check_releasing_today()
+    assert notified_at(db, "B0TEST0001") is None
+
+    sent["delivered"] = True
+    scheduler.check_releasing_today()
+    assert notified_at(db, "B0TEST0001") is not None
+    assert len(sent["releasing_today"]) == 2
