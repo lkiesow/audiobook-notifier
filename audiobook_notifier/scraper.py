@@ -45,28 +45,52 @@ def fetch_page(url: str) -> Optional[str]:
         return None
 
 
+def is_iso_date(value: Optional[str]) -> bool:
+    """True if value is a real calendar date in YYYY-MM-DD form."""
+    if not value:
+        return False
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+    except ValueError:
+        return False
+    return True
+
+
 def parse_release_date(date_str: str, series_url: str = "") -> str:
+    """Return the release date as YYYY-MM-DD, or "" if it cannot be parsed.
+
+    Never returns a half-parsed or foreign-format string: downstream SQL
+    compares release_date lexicographically against date('now'), where e.g.
+    "12.08.26" sorts before every ISO date and would look like a past release.
+    """
     if not date_str:
         return ""
+
+    parsed = ""
 
     # German format: DD.MM.YYYY
     match = re.match(r"(\d{2})\.(\d{2})\.(\d{4})", date_str)
     if match:
         day, month, year = match.groups()
-        return f"{year}-{month}-{day}"
+        parsed = f"{year}-{month}-{day}"
 
     # English/numeric format: MM-DD-YY or DD-MM-YY
-    match = re.match(r"(\d{2})-(\d{2})-(\d{2})", date_str)
-    if match:
-        if "audible.com" in series_url:
-            month, day, year = match.groups()
-        else:
-            day, month, year = match.groups()
-        current_year = datetime.now().year % 100
-        year = f"19{year}" if int(year) > current_year else f"20{year}"
-        return f"{year}-{month}-{day}"
+    if not parsed:
+        match = re.match(r"(\d{2})-(\d{2})-(\d{2})", date_str)
+        if match:
+            if "audible.com" in series_url:
+                month, day, year = match.groups()
+            else:
+                day, month, year = match.groups()
+            current_year = datetime.now().year % 100
+            year = f"19{year}" if int(year) > current_year else f"20{year}"
+            parsed = f"{year}-{month}-{day}"
 
-    return date_str
+    if is_iso_date(parsed):
+        return parsed
+
+    logger.warning("Could not parse release date %r (series %s)", date_str, series_url)
+    return ""
 
 
 def extract_series_title(soup: BeautifulSoup) -> str:

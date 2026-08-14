@@ -83,6 +83,25 @@ def notify_releasing_today(book_title: str, series_title: str) -> None:
         metrics.notifications_sent_total.labels(type="releasing_today").inc()
 
 
+def notify_release_postponed(
+    book_title: str, series_title: str, old_date: str, new_date: str
+) -> None:
+    logger.info(
+        "Release postponed: %s in %s moved from %s to %s",
+        book_title,
+        series_title,
+        old_date,
+        new_date,
+    )
+    if _matrix_enabled():
+        _send_matrix(
+            f"↪ Postponed in {series_title}: {book_title} "
+            f"moved from {old_date} to {new_date}",
+            config.MATRIX_MSGTYPE_POSTPONED,
+        )
+        metrics.notifications_sent_total.labels(type="postponed").inc()
+
+
 def notify_scrape_error(series_label: str) -> None:
     if _matrix_enabled() and config.NOTIFY_SCRAPE_ERRORS:
         _send_matrix(

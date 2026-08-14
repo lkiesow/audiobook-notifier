@@ -21,6 +21,7 @@ NOTIFY_SCRAPE_ERRORS: bool = os.environ.get("NOTIFY_SCRAPE_ERRORS", "").lower() 
 MATRIX_MSGTYPE_NEW_BOOK: str = os.environ.get("MATRIX_MSGTYPE_NEW_BOOK", "m.notice")
 MATRIX_MSGTYPE_RELEASING_TODAY: str = os.environ.get("MATRIX_MSGTYPE_RELEASING_TODAY", "m.notice")
 MATRIX_MSGTYPE_SCRAPE_ERROR: str = os.environ.get("MATRIX_MSGTYPE_SCRAPE_ERROR", "m.notice")
+MATRIX_MSGTYPE_POSTPONED: str = os.environ.get("MATRIX_MSGTYPE_POSTPONED", "m.notice")
 
 AUTH_USERNAME: str = os.environ.get("AUTH_USERNAME", "")
 AUTH_PASSWORD: str = os.environ.get("AUTH_PASSWORD", "")

@@ -15,6 +15,28 @@ logger = logging.getLogger(__name__)
 _scheduler = BackgroundScheduler(job_defaults={"misfire_grace_time": 3600})
 
 
+def _handle_postponement(old: dict, book: dict, series_title: str) -> None:
+    """Re-arm the release notification when a release moved to a later date.
+
+    release_notified_at is a one-shot flag. Without this, a book announced on
+    the release date Audible advertised at the time stays marked as announced
+    forever, and the actual release day passes in silence.
+    """
+    old_date = old["release_date"]
+    new_date = book["release_date"]
+    if old["release_notified_at"] is None:
+        return
+    if not (scraper.is_iso_date(old_date) and scraper.is_iso_date(new_date)):
+        return
+    if new_date <= old_date:
+        return
+
+    database.clear_release_notified(book["asin"])
+    notifications.notify_release_postponed(
+        book["title"], series_title, old_date, new_date
+    )
+
+
 def scrape_and_update(series_id: int) -> bool:
     series = database.get_series(series_id)
     if not series:
@@ -39,13 +61,13 @@ def scrape_and_update(series_id: int) -> bool:
         metrics.scrapes_total.labels(result="error").inc()
         return False
 
-    existing_asins = database.get_existing_asins(series_id)
+    existing = database.get_existing_books(series_id)
 
     for book in books:
         asin = book.get("asin")
         if not asin:
             continue
-        if asin not in existing_asins:
+        if asin not in existing:
             try:
                 database.insert_book(series_id, book)
                 metrics.new_books_discovered_total.inc()
@@ -57,6 +79,7 @@ def scrape_and_update(series_id: int) -> bool:
                 )
         else:
             database.update_book(asin, book)
+            _handle_postponement(existing[asin], book, result["series_title"])
 
     database.update_series(
         series_id,

@@ -30,6 +30,11 @@ CREATE TABLE IF NOT EXISTS books (
 );
 """
 
+# release_date is free-form TEXT filled from scraped pages. Every comparison
+# against date('now') is lexicographic, so an empty or foreign-format value
+# would sort before today and read as "already released". Guard with this.
+ISO_DATE_GLOB = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"
+
 
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(config.DATABASE_PATH, check_same_thread=False)
@@ -145,12 +150,19 @@ def get_books(series_id: int) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def get_existing_asins(series_id: int) -> set[str]:
+def get_existing_books(series_id: int) -> dict[str, dict]:
+    """Books already stored for a series, keyed by ASIN.
+
+    Carries the previous release_date and release_notified_at so a scrape can
+    tell a postponed release apart from an unchanged one.
+    """
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT asin FROM books WHERE series_id = ?", (series_id,)
+            "SELECT asin, release_date, release_notified_at FROM books "
+            "WHERE series_id = ?",
+            (series_id,),
         ).fetchall()
-    return {r["asin"] for r in rows}
+    return {r["asin"]: dict(r) for r in rows}
 
 
 def insert_book(series_id: int, book: dict) -> None:
@@ -162,9 +174,9 @@ def insert_book(series_id: int, book: dict) -> None:
                  duration, release_date, language, book_url, cover_image_url,
                  release_notified_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                CASE WHEN ? IS NOT NULL AND ? <= date('now')
+                CASE WHEN ? GLOB '{glob}' AND ? <= date('now')
                      THEN datetime('now') ELSE NULL END)
-            """,
+            """.format(glob=ISO_DATE_GLOB),
             (
                 series_id,
                 book["asin"],
@@ -189,16 +201,20 @@ def update_book(asin: str, book: dict) -> None:
             """
             UPDATE books SET
                 title = ?, subtitle = ?, author = ?, narrator = ?,
-                duration = ?, release_date = ?, language = ?, book_url = ?,
+                duration = ?,
+                release_date = CASE WHEN ? GLOB '{glob}'
+                                    THEN ? ELSE release_date END,
+                language = ?, book_url = ?,
                 cover_image_url = ?
             WHERE asin = ?
-            """,
+            """.format(glob=ISO_DATE_GLOB),
             (
                 book["title"],
                 book["subtitle"],
                 book["author"],
                 book["narrator"],
                 book["duration"],
+                book["release_date"],
                 book["release_date"],
                 book["language"],
                 book["book_url"],
@@ -215,9 +231,10 @@ def get_unnotified_books() -> list[dict]:
             SELECT b.*, s.title as series_title
             FROM books b
             JOIN series s ON s.id = b.series_id
-            WHERE b.release_date <= date('now')
+            WHERE b.release_date GLOB '{glob}'
+              AND b.release_date <= date('now')
               AND b.release_notified_at IS NULL
-            """
+            """.format(glob=ISO_DATE_GLOB)
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -226,5 +243,14 @@ def mark_release_notified(asin: str) -> None:
     with get_connection() as conn:
         conn.execute(
             "UPDATE books SET release_notified_at = datetime('now') WHERE asin = ?",
+            (asin,),
+        )
+
+
+def clear_release_notified(asin: str) -> None:
+    """Re-arm the release notification, e.g. after a release was postponed."""
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE books SET release_notified_at = NULL WHERE asin = ?",
             (asin,),
         )

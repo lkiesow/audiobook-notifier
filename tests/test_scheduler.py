@@ -1,0 +1,118 @@
+import pytest
+
+from audiobook_notifier import notifications, scheduler, scraper
+from tests.conftest import make_book
+
+
+@pytest.fixture
+def sent(monkeypatch):
+    """Capture notifications instead of sending them."""
+    calls = {"postponed": [], "new_book": [], "releasing_today": []}
+    monkeypatch.setattr(
+        notifications, "notify_release_postponed",
+        lambda *a: calls["postponed"].append(a),
+    )
+    monkeypatch.setattr(
+        notifications, "notify_new_book",
+        lambda *a: calls["new_book"].append(a),
+    )
+    monkeypatch.setattr(
+        notifications, "notify_releasing_today",
+        lambda *a: calls["releasing_today"].append(a),
+    )
+    return calls
+
+
+def scrape_returns(monkeypatch, books, series_title="Test Series"):
+    monkeypatch.setattr(
+        scraper, "scrape_series",
+        lambda url: {"series_title": series_title, "books": books},
+    )
+
+
+def notified_at(db, asin):
+    with db.get_connection() as conn:
+        return conn.execute(
+            "SELECT release_notified_at FROM books WHERE asin = ?", (asin,)
+        ).fetchone()[0]
+
+
+def test_postponed_release_is_rearmed_and_announced(db, series_id, sent, monkeypatch):
+    """The Path of Ascension 12 incident.
+
+    Announced on the date Audible advertised at the time, then postponed by a
+    week. The book must become eligible again for the real release day.
+    """
+    db.insert_book(series_id, make_book(release_date="2026-08-05"))
+    assert notified_at(db, "B0TEST0001") is not None
+
+    scrape_returns(monkeypatch, [make_book(release_date="2026-08-12")])
+    assert scheduler.scrape_and_update(series_id) is True
+
+    assert notified_at(db, "B0TEST0001") is None
+    assert sent["postponed"] == [
+        ("Test Book 1", "Test Series", "2026-08-05", "2026-08-12")
+    ]
+    # Eligible again, so the next release check announces it on the real date.
+    assert [b["asin"] for b in db.get_unnotified_books()] == ["B0TEST0001"]
+
+
+def test_unchanged_date_is_not_treated_as_a_postponement(db, series_id, sent, monkeypatch):
+    db.insert_book(series_id, make_book(release_date="2020-01-01"))
+    scrape_returns(monkeypatch, [make_book(release_date="2020-01-01")])
+    scheduler.scrape_and_update(series_id)
+
+    assert notified_at(db, "B0TEST0001") is not None
+    assert sent["postponed"] == []
+
+
+def test_date_moving_earlier_is_not_a_postponement(db, series_id, sent, monkeypatch):
+    db.insert_book(series_id, make_book(release_date="2020-06-01"))
+    scrape_returns(monkeypatch, [make_book(release_date="2020-01-01")])
+    scheduler.scrape_and_update(series_id)
+
+    assert notified_at(db, "B0TEST0001") is not None
+    assert sent["postponed"] == []
+
+
+def test_unannounced_book_moving_later_stays_quiet(db, series_id, sent, monkeypatch):
+    db.insert_book(series_id, make_book(release_date="2099-01-01"))
+    scrape_returns(monkeypatch, [make_book(release_date="2099-06-01")])
+    scheduler.scrape_and_update(series_id)
+
+    assert notified_at(db, "B0TEST0001") is None
+    assert sent["postponed"] == []
+
+
+def test_unparsable_new_date_is_not_a_postponement(db, series_id, sent, monkeypatch):
+    """A degraded page yielding no date must not re-arm or rewrite anything."""
+    db.insert_book(series_id, make_book(release_date="2020-01-01"))
+    scrape_returns(monkeypatch, [make_book(release_date="")])
+    scheduler.scrape_and_update(series_id)
+
+    assert notified_at(db, "B0TEST0001") is not None
+    assert sent["postponed"] == []
+    with db.get_connection() as conn:
+        row = conn.execute(
+            "SELECT release_date FROM books WHERE asin = ?", ("B0TEST0001",)
+        ).fetchone()
+    assert row[0] == "2020-01-01"
+
+
+def test_empty_scrape_result_skips_the_update(db, series_id, sent, monkeypatch):
+    db.insert_book(series_id, make_book(release_date="2020-01-01"))
+    scrape_returns(monkeypatch, [])
+    monkeypatch.setattr("audiobook_notifier.notifications.notify_scrape_error",
+                        lambda *a: None)
+
+    assert scheduler.scrape_and_update(series_id) is False
+
+
+def test_check_releasing_today_announces_and_stamps(db, series_id, sent):
+    db.insert_book(series_id, make_book(release_date="2020-01-01"))
+    db.clear_release_notified("B0TEST0001")
+
+    scheduler.check_releasing_today()
+
+    assert sent["releasing_today"] == [("Test Book 1", "Test Series")]
+    assert notified_at(db, "B0TEST0001") is not None
