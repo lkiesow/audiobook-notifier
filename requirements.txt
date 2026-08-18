@@ -1,6 +1,5 @@
 flask
 requests
-beautifulsoup4
 apscheduler
 tzdata
 python-dotenv

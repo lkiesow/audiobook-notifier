@@ -59,6 +59,14 @@ def scrape_and_update(series_id: int) -> bool:
     books = result["books"]
     existing = database.get_existing_books(series_id)
 
+    # A series is only news once it has been seen at least once, and once it has
+    # been through a catalog-API scrape — the move off HTML surfaces editions the
+    # old series page never listed, and those are backfill, not new releases.
+    notify_new = (
+        series["last_scraped_at"] is not None
+        and series["api_backfilled_at"] is not None
+    )
+
     for book in books:
         asin = book.get("asin")
         if not asin:
@@ -67,7 +75,7 @@ def scrape_and_update(series_id: int) -> bool:
             try:
                 database.insert_book(series_id, book)
                 metrics.new_books_discovered_total.inc()
-                if series["last_scraped_at"] is not None:
+                if notify_new:
                     notifications.notify_new_book(book["title"], result["series_title"])
             except sqlite3.IntegrityError:
                 logger.warning(
@@ -77,6 +85,7 @@ def scrape_and_update(series_id: int) -> bool:
             database.update_book(asin, book)
             _handle_postponement(existing[asin], book, result["series_title"])
 
+    database.mark_api_backfilled(series_id)
     database.update_series(
         series_id,
         result["series_title"],

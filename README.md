@@ -41,9 +41,9 @@ All configuration is done via environment variables or a `.env` file in the proj
 |----------------------------|-------------|------------------
 | `DATABASE_PATH`            | `data.db`   | Path to the SQLite database file
 | `SCRAPE_INTERVAL_HOURS`    | `24`        | How often (in hours) to re-scrape all tracked series
-| `SCRAPE_DELAY_SECONDS`     | `60`        | Delay between scraping consecutive series (rate limiting)
-| `SCRAPE_TIMEOUT_SECONDS`   | `30`        | HTTP timeout for a single page request
-| `SCRAPE_RETRY_ATTEMPTS`    | `6`         | How often to re-fetch a series page before giving up — see [Scrape retries](#scrape-retries)
+| `SCRAPE_DELAY_SECONDS`     | `5`         | Delay between scraping consecutive series (rate limiting)
+| `SCRAPE_TIMEOUT_SECONDS`   | `30`        | HTTP timeout for a single API request
+| `SCRAPE_RETRY_ATTEMPTS`    | `6`         | How often to re-fetch a series before giving up — see [How scraping works](#how-scraping-works)
 | `SCRAPE_RETRY_BACKOFF_SECONDS`     | `5`  | Initial delay between scrape attempts, doubling each time
 | `SCRAPE_RETRY_MAX_BACKOFF_SECONDS` | `30` | Upper bound on that delay
 | `RELEASE_CHECK_HOUR`       | `9`         | Hour (0-23, in the container's local time) to run the daily release check
@@ -54,6 +54,11 @@ All configuration is done via environment variables or a `.env` file in the proj
 | `MATRIX_HOMESERVER`        |             | Matrix homeserver URL — leave blank to disable notifications
 | `MATRIX_ACCESS_TOKEN`      |             | Matrix bot access token
 | `MATRIX_ROOM_ID`           |             | Room ID (`!abc:example.org`) or alias (`#name:example.org`)
+| `NOTIFY_SCRAPE_ERRORS`     | `false`     | Set to `true` to also notify when a series scrape fails
+| `MATRIX_MSGTYPE_NEW_BOOK`  | `m.notice`  | Matrix message type — `m.notice` is silent, `m.text` triggers push notifications
+| `MATRIX_MSGTYPE_RELEASING_TODAY` | `m.notice` | As above, for release-day announcements
+| `MATRIX_MSGTYPE_POSTPONED` | `m.notice`  | As above, for postponement announcements
+| `MATRIX_MSGTYPE_SCRAPE_ERROR`    | `m.notice` | As above, for scrape failures
 | `MATRIX_TIMEOUT_SECONDS`   | `10`        | HTTP timeout for a single Matrix request
 | `MATRIX_RETRY_ATTEMPTS`    | `3`         | How often to retry a send that failed on a connection error, 5xx or 429
 | `MATRIX_RETRY_BACKOFF_SECONDS`     | `2`  | Initial delay between send attempts, doubling each time
@@ -128,28 +133,43 @@ The notifications sent are:
 - **Postponed** — when Audible moves a release we already announced to a later date. The book is then announced again on its real release date
 - **Scrape failed** — only when `NOTIFY_SCRAPE_ERRORS=true`
 
-## Scrape retries
+## How scraping works
 
-Audible serves two different series pages for the same URL, and which one you
-get varies per request. The classic page lists titles as
-`<li class="productListItem">` and is the one this scraper understands. The
-other is built from `<adbl-product-row>` web components; it lists the same
-titles but carries no release dates at all, so there is nothing to parse.
+Series data comes from Audible's own catalog API — the unauthenticated one their
+web frontend talks to — not from the HTML series page. Two requests per series:
 
-Both come back as a healthy HTTP 200, which is why a scrape retries the whole
-fetch and parse rather than just the HTTP request. Attempts are independent —
-each one takes a fresh `User-Agent` and no shared cookie jar. The backoff is
-capped because this is a coin flip over which page you get, not a rate limit,
-so waiting longer buys nothing.
+1. `GET https://api.audible.de/1.0/catalog/products/{series_asin}?response_groups=relationships,product_desc`
+   returns the series title and the ASIN of every volume.
+2. `GET https://api.audible.de/1.0/catalog/products?asins=...` returns the full
+   metadata for those ASINs, batched 50 at a time.
 
-A series that exhausts its attempts is skipped entirely for that run rather
-than written to the database, so a page we cannot read can never overwrite
-good data. `Got Audible's unsupported new layout` in the logs tells the two
-failure modes apart.
+The series ASIN is the last path segment of the series URL you add, and the API
+host follows that URL's marketplace — `www.audible.de` is served by
+`api.audible.de`, `www.audible.com` by `api.audible.com`, and so on. Series and
+product ASINs are minted per storefront, so the same series has a different ASIN
+on each one and asking the wrong host returns an empty stub.
 
-Note this only works while the classic page is still being served. If Audible
-completes the rollout, the scraper will need a different source for release
-dates.
+This replaced HTML scraping, which Audible broke by rolling out a
+`<adbl-product-row>` web-component series page carrying no release dates at all.
+The API is also simply better data: release dates arrive as ISO `YYYY-MM-DD`
+rather than a localised string that had to be guessed at per marketplace.
+
+Two things get filtered out along the way:
+
+- **Placeholder products**, which Audible seeds for volumes it has announced but
+  not dated. They carry a `PL_HLDR_` SKU, a 2200-01-01 release date, no cover and
+  no runtime, and there is nothing a release notifier can do with them.
+- **Nothing else.** The API lists every edition of a series, including
+  re-recordings and alternate publishers that the old HTML page never showed. The
+  first API scrape of a series therefore imports a batch of books that are new to
+  the database but not news to you, so that first pass is silent — no new-book
+  notifications until the series has been scraped through the API once.
+
+A scrape retries the whole two-request sequence, with a capped exponential
+backoff, and a series that exhausts its attempts is skipped entirely for that
+run rather than written to the database — a failed fetch can never overwrite good
+data. A partly-fetched batch counts as a failure for the same reason: half a
+series is indistinguishable from a series that lost books.
 
 ## Production
 
@@ -169,5 +189,5 @@ a perfectly healthy worker in the middle of a run — losing it entirely and
 resetting the interval timer.
 
 A full run takes roughly `series × SCRAPE_DELAY_SECONDS`, plus up to ~95s for
-each series that has to exhaust its retries. For 25 series that is around 25
-minutes normally and just over an hour if every single series fails.
+each series that has to exhaust its retries. For 25 series that is around two
+minutes normally, and up to about 40 minutes if every single series fails.

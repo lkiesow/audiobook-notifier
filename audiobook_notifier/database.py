@@ -5,11 +5,12 @@ from audiobook_notifier import config
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS series (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    url             TEXT UNIQUE NOT NULL,
-    title           TEXT,
-    last_scraped_at TEXT,
-    created_at      TEXT DEFAULT (datetime('now'))
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    url               TEXT UNIQUE NOT NULL,
+    title             TEXT,
+    last_scraped_at   TEXT,
+    api_backfilled_at TEXT,
+    created_at        TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS books (
@@ -43,9 +44,22 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
+# Columns added after the first release. CREATE TABLE IF NOT EXISTS leaves an
+# existing table alone, so new columns have to be added by hand.
+_MIGRATIONS = (
+    ("series", "api_backfilled_at", "ALTER TABLE series ADD COLUMN api_backfilled_at TEXT"),
+)
+
+
 def init_db() -> None:
     with get_connection() as conn:
         conn.executescript(_SCHEMA)
+        for table, column, statement in _MIGRATIONS:
+            columns = {
+                r["name"] for r in conn.execute(f"PRAGMA table_info({table})")
+            }
+            if column not in columns:
+                conn.execute(statement)
 
 
 # --- Series ---
@@ -129,6 +143,21 @@ def add_series(url: str) -> int:
 def delete_series(series_id: int) -> None:
     with get_connection() as conn:
         conn.execute("DELETE FROM series WHERE id = ?", (series_id,))
+
+
+def mark_api_backfilled(series_id: int) -> None:
+    """Record that this series has been through one catalog-API scrape.
+
+    The API lists editions the old HTML series page never showed — re-recordings
+    and alternate publishers — so the first API scrape of an existing series
+    turns up a pile of "new" books that are not news to anyone. Stamping this
+    lets that first pass import silently and every later one notify normally.
+    """
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE series SET api_backfilled_at = datetime('now') WHERE id = ?",
+            (series_id,),
+        )
 
 
 def update_series(series_id: int, title: str, last_scraped_at: str) -> None:

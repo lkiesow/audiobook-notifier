@@ -132,3 +132,39 @@ def test_undelivered_release_stays_queued_for_the_next_check(db, series_id, sent
     scheduler.check_releasing_today()
     assert notified_at(db, "B0TEST0001") is not None
     assert len(sent["releasing_today"]) == 2
+
+
+def test_first_api_scrape_imports_silently(db, series_id, sent, monkeypatch):
+    """The cutover from HTML scraping must not fire a burst of new-book alerts.
+
+    The catalog API lists editions the old series page never showed — re-recordings
+    and alternate publishers — so the first API scrape of an existing series turns
+    up a pile of books that are new to us but not to the user.
+    """
+    scrape_returns(monkeypatch, [make_book(), make_book(asin="B0TEST0002")])
+    scheduler.scrape_and_update(series_id)
+
+    assert sent["new_book"] == []
+    assert len(db.get_books(series_id)) == 2
+    assert db.get_series(series_id)["api_backfilled_at"] is not None
+
+
+def test_books_found_after_the_backfill_are_announced(db, series_id, sent, monkeypatch):
+    scrape_returns(monkeypatch, [make_book()])
+    scheduler.scrape_and_update(series_id)
+    assert sent["new_book"] == []
+
+    scrape_returns(monkeypatch, [make_book(), make_book(asin="B0TEST0002",
+                                                        title="Test Book 2")])
+    scheduler.scrape_and_update(series_id)
+
+    assert sent["new_book"] == [("Test Book 2", "Test Series")]
+
+
+def test_a_never_scraped_series_stays_quiet_on_its_first_run(db, sent, monkeypatch):
+    """Adding a series imports its back catalogue; none of that is news."""
+    sid = db.add_series("https://www.audible.de/series/New-Hoerbuecher/B000000001")
+    scrape_returns(monkeypatch, [make_book()])
+    scheduler.scrape_and_update(sid)
+
+    assert sent["new_book"] == []

@@ -6,7 +6,7 @@ load_dotenv()
 
 DATABASE_PATH: str = os.environ.get("DATABASE_PATH", "data.db")
 SCRAPE_INTERVAL_HOURS: int = int(os.environ.get("SCRAPE_INTERVAL_HOURS", "24"))
-SCRAPE_DELAY_SECONDS: int = int(os.environ.get("SCRAPE_DELAY_SECONDS", "60"))
+SCRAPE_DELAY_SECONDS: int = int(os.environ.get("SCRAPE_DELAY_SECONDS", "5"))
 SCRAPE_TIMEOUT_SECONDS: int = int(os.environ.get("SCRAPE_TIMEOUT_SECONDS", "30"))
 SCRAPE_RETRY_ATTEMPTS: int = int(os.environ.get("SCRAPE_RETRY_ATTEMPTS", "6"))
 SCRAPE_RETRY_BACKOFF_SECONDS: float = float(os.environ.get("SCRAPE_RETRY_BACKOFF_SECONDS", "5"))
