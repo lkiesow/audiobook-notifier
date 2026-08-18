@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "audiobook-notifier"
+description = "Track Audible audiobook series and get notified about new and released books"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.14"
+dynamic = ["version"]
+dependencies = [
+    "flask",
+    "requests",
+    "apscheduler",
+    "tzdata",
+    "python-dotenv",
+    "authlib",
+    "prometheus_client",
+]
+
+[project.optional-dependencies]
+# Production WSGI server, see the "Production" section of the README.
+server = ["gunicorn"]
+dev = ["pytest"]
+
+[tool.setuptools.dynamic]
+version = {attr = "audiobook_notifier.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["audiobook_notifier*"]
+
+[tool.setuptools.package-data]
+audiobook_notifier = ["static/*", "templates/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

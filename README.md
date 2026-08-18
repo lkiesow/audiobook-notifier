@@ -19,7 +19,7 @@ A self-hosted web app that tracks Audible audiobook series and notifies you when
 ```bash
 git clone <repo-url>
 cd audiobook-notifier
-pip install -r requirements.txt
+pip install -e .
 cp .env.example .env
 ```
 
@@ -173,9 +173,11 @@ series is indistinguishable from a series that lost books.
 
 ## Production
 
-Instead of using the internal web server, which is meant for debugging only, in production, you can run the app using a WSGI server like gunicorn:
+Instead of using the internal web server, which is meant for debugging only, in production, you can run the app using a WSGI server like gunicorn, installed by the `server` extra:
 
 ```bash
+pip install -e '.[server]'
+
 gunicorn -w 1 --threads 4 --timeout 0 -b 127.0.0.1:5000 audiobook_notifier.__main__:app
 ```
 

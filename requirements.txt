@@ -1,7 +1,0 @@
-flask
-requests
-apscheduler
-tzdata
-python-dotenv
-authlib
-prometheus_client

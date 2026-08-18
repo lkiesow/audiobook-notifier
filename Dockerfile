@@ -2,10 +2,9 @@ FROM python:3.14-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt gunicorn
-
-COPY . .
+COPY pyproject.toml README.md LICENSE ./
+COPY audiobook_notifier ./audiobook_notifier
+RUN pip install --no-cache-dir '.[server]'
 
 EXPOSE 5000
 
