@@ -227,15 +227,7 @@ async function loadUpcoming() {
     section.style.display = 'none';
     return;
   }
-  list.innerHTML = data.map(b => `
-    <li>
-      ${coverThumb(b.cover_image_url, b.title, 160)}
-      <div class="upcoming-text">
-        <span class="upcoming-date">${formatDate(b.release_date)}</span>
-        ${b.book_url ? `<a href="${escHtml(b.book_url)}" target="_blank" rel="noopener noreferrer">${escHtml(b.title)}</a>` : escHtml(b.title)}
-        <span class="upcoming-series">— ${escHtml(b.series_title)}</span>
-      </div>
-    </li>`).join('');
+  list.innerHTML = data.map(b => bookRow(b)).join('');
   section.style.display = '';
 }
 
@@ -247,14 +239,7 @@ async function loadToday() {
     section.style.display = 'none';
     return;
   }
-  list.innerHTML = data.map(b => `
-    <li>
-      ${coverThumb(b.cover_image_url, b.title, 160)}
-      <div class="upcoming-text">
-        ${b.book_url ? `<a href="${escHtml(b.book_url)}" target="_blank" rel="noopener noreferrer">${escHtml(b.title)}</a>` : escHtml(b.title)}
-        <span class="upcoming-series">— ${escHtml(b.series_title)}</span>
-      </div>
-    </li>`).join('');
+  list.innerHTML = data.map(b => bookRow(b, { showDate: false })).join('');
   section.style.display = '';
 }
 

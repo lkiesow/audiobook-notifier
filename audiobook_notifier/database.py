@@ -92,7 +92,8 @@ def get_upcoming_books(limit: int = 3) -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
             """
-            SELECT b.title, b.release_date, b.cover_image_url, b.book_url, s.title AS series_title
+            SELECT b.title, b.author, b.release_date, b.cover_image_url,
+                   b.book_url, s.title AS series_title
             FROM books b
             JOIN series s ON s.id = b.series_id
             WHERE b.release_date > date('now')
@@ -129,7 +130,8 @@ def get_todays_books() -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
             """
-            SELECT b.title, b.release_date, b.cover_image_url, b.book_url, s.title AS series_title
+            SELECT b.title, b.author, b.release_date, b.cover_image_url,
+                   b.book_url, s.title AS series_title
             FROM books b
             JOIN series s ON s.id = b.series_id
             WHERE b.release_date = date('now')

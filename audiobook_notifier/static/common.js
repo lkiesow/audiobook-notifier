@@ -35,3 +35,22 @@ function coverThumb(url, title, size) {
   const src = escHtml(url.replace(/_SL\d+_/, `_SL${size}_`));
   return `<img class="cover-thumb" src="${src}" alt="${escHtml(title || '')}" loading="lazy">`;
 }
+
+// One row shape for every book list — Out today, Upcoming and the Backlog.
+// Title, author and series are separated by "·" on desktop and stack onto
+// their own lines without it on narrow screens; both are CSS, see .book-line.
+function bookRow(b, { showDate = true } = {}) {
+  const title = escHtml(b.title || '—');
+  return `
+    <li>
+      ${coverThumb(b.cover_image_url, b.title, 160)}
+      <div class="book-info">
+        ${showDate ? `<span class="book-date">${formatDate(b.release_date)}</span>` : ''}
+        <div class="book-line">
+          <span class="book-title">${b.book_url ? `<a href="${escHtml(b.book_url)}" target="_blank" rel="noopener noreferrer">${title}</a>` : title}</span>
+          ${b.author ? `<span class="book-author">${escHtml(b.author)}</span>` : ''}
+          <span class="book-series">${escHtml(b.series_title || '')}</span>
+        </div>
+      </div>
+    </li>`;
+}

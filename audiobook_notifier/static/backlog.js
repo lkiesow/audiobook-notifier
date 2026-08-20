@@ -16,16 +16,7 @@ async function loadBacklog() {
   }
 
   stats.textContent = `${data.length} book${data.length !== 1 ? 's' : ''}`;
-  list.innerHTML = data.map(b => `
-    <li>
-      ${coverThumb(b.cover_image_url, b.title, 160)}
-      <div class="upcoming-text">
-        <span class="upcoming-date">${formatDate(b.release_date)}</span>
-        ${b.book_url ? `<a href="${escHtml(b.book_url)}" target="_blank" rel="noopener noreferrer">${escHtml(b.title || '—')}</a>` : escHtml(b.title || '—')}
-        ${b.author ? `<span class="backlog-author">${escHtml(b.author)}</span>` : ''}
-        <span class="upcoming-series">— ${escHtml(b.series_title)}</span>
-      </div>
-    </li>`).join('');
+  list.innerHTML = data.map(b => bookRow(b)).join('');
   section.style.display = '';
 }
 
