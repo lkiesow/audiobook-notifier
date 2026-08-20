@@ -4,36 +4,14 @@ const expandedSeries = new Set();
 let pendingPollInterval = null;
 const refreshingSeries = new Map(); // id → last_scraped_at snapshot
 
-// --- API helpers ---
-
-async function apiFetch(path, options = {}) {
-  const res = await fetch(path, options);
-  if (res.status === 401) { window.location.href = '/login'; return; }
-  if (res.status === 204) return null;
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!res.ok) throw Object.assign(new Error(data?.error || res.statusText), { status: res.status });
-  return data;
-}
+// apiFetch(), escHtml(), formatDate() and coverThumb() live in common.js.
 
 // --- Render ---
-
-function formatDate(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return isNaN(d) ? iso : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
 
 function formatScraped(iso) {
   if (!iso) return 'never';
   const d = new Date(iso);
   return isNaN(d) ? iso : d.toLocaleString();
-}
-
-function coverThumb(url, title, size) {
-  if (!url) return '';
-  const src = escHtml(url.replace(/_SL\d+_/, `_SL${size}_`));
-  return `<img class="cover-thumb" src="${src}" alt="${escHtml(title || '')}" loading="lazy">`;
 }
 
 function renderBooks(books, containerEl) {
@@ -84,14 +62,6 @@ function buildCoverStack(covers) {
   return `<div class="cover-stack" data-covers="${escHtml(covers.join('|'))}">${imgs}</div>`;
 }
 
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function updateSeriesStats(seriesList) {
   const heading = document.getElementById('series-heading');
   const statsEl = document.getElementById('series-stats');
@@ -105,7 +75,11 @@ function renderSeries(seriesList) {
   updateSeriesStats(seriesList);
   const container = document.getElementById('series-container');
   if (!seriesList.length) {
-    container.innerHTML = '<p style="color:#888;font-size:.9rem">No series tracked yet.</p>';
+    container.innerHTML = `
+      <div class="panel empty-panel">
+        <p>No series tracked yet.</p>
+        <a class="button-link" href="/add">Track your first series →</a>
+      </div>`;
     stopPendingPoll();
     return;
   }
@@ -342,34 +316,6 @@ async function refreshSeries(btn, seriesId) {
     btn.textContent = orig;
   }
 }
-
-// --- Form ---
-
-document.getElementById('add-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const errorEl = document.getElementById('add-error');
-  const input = document.getElementById('url-input');
-  const btn = e.target.querySelector('button[type="submit"]');
-  errorEl.textContent = '';
-  if (!input.value.includes('audible.') || !input.value.includes('/series/')) {
-    errorEl.textContent = 'Please enter an Audible series URL';
-    return;
-  }
-  btn.disabled = true;
-  try {
-    await apiFetch('/api/series', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: input.value.trim() }),
-    });
-    input.value = '';
-    await Promise.all([loadSeries(), loadUpcoming(), loadToday()]);
-  } catch (err) {
-    errorEl.textContent = err.status === 409 ? 'This series is already being tracked.' : (err.message || 'Something went wrong.');
-  } finally {
-    btn.disabled = false;
-  }
-});
 
 // --- Event delegation ---
 

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add series · Audiobook Notifier</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/icon.png" type="image/png">
+</head>
+<body>
+  <main>
+    {% include "_header.html" %}
+
+    <section id="add-section" class="panel">
+      <h2>Track a new series</h2>
+      <form id="add-form">
+        <input
+          type="url"
+          id="url-input"
+          placeholder="https://www.audible.de/series/…"
+          required
+        >
+        <button type="submit">Add</button>
+      </form>
+      <div id="add-error"></div>
+    </section>
+  </main>
+
+  <script src="/common.js"></script>
+  <script src="/add.js"></script>
+</body>
+</html>

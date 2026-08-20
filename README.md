@@ -10,6 +10,7 @@ A self-hosted web app that tracks Audible audiobook series and notifies you when
 - Background scraping on a configurable interval (default: every 24 hours)
 - Daily release-day notifications (09:00 local time by default, configurable)
 - Upcoming releases panel in the web UI
+- Backlog page listing every past release, newest first
 - Matrix notifications (optional) — with a setup wizard to create a bot room
 - Light/dark mode web UI
 - No external runtime dependencies beyond Python

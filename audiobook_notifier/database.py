@@ -104,6 +104,27 @@ def get_upcoming_books(limit: int = 3) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def get_released_books() -> list[dict]:
+    """Every already-released book, newest release first.
+
+    The GLOB guard matters here: release_date is free-form, and an empty or
+    foreign-format value would sort before today and read as released.
+    """
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT b.title, b.author, b.release_date, b.cover_image_url,
+                   b.book_url, s.title AS series_title
+            FROM books b
+            JOIN series s ON s.id = b.series_id
+            WHERE b.release_date GLOB '{glob}'
+              AND b.release_date <= date('now')
+            ORDER BY b.release_date DESC, s.title ASC
+            """.format(glob=ISO_DATE_GLOB)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def get_todays_books() -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(

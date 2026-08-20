@@ -1,4 +1,9 @@
+from datetime import datetime, timezone
+
 from tests.conftest import make_book
+
+# date('now') in SQLite is UTC, so the "today" boundary has to be too.
+TODAY = datetime.now(timezone.utc).date().isoformat()
 
 
 def _row(db, asin):
@@ -61,6 +66,28 @@ def test_clear_release_notified_round_trip(db, series_id):
     assert _row(db, "B0TEST0001")["release_notified_at"] is None
     db.mark_release_notified("B0TEST0001")
     assert _row(db, "B0TEST0001")["release_notified_at"] is not None
+
+
+def test_released_books_newest_first_with_today_included(db, series_id):
+    db.insert_book(series_id, make_book(asin="A1", release_date="2020-01-01", title="Old"))
+    db.insert_book(series_id, make_book(asin="A2", release_date=TODAY, title="Today"))
+    db.insert_book(series_id, make_book(asin="A3", release_date="2023-06-15", title="Middle"))
+    books = db.get_released_books()
+    assert [b["title"] for b in books] == ["Today", "Middle", "Old"]
+    assert books[0]["author"] == "An Author"
+    assert books[0]["series_title"] == "Test Series"
+
+
+def test_released_books_excludes_future(db, series_id):
+    db.insert_book(series_id, make_book(asin="A1", release_date="2099-01-01"))
+    assert db.get_released_books() == []
+
+
+def test_released_books_excludes_malformed_dates(db, series_id):
+    # '' and non-ISO values sort before date('now') and would read as released.
+    db.insert_book(series_id, make_book(asin="A1", release_date=""))
+    db.insert_book(series_id, make_book(asin="A2", release_date="Bald verfügbar"))
+    assert db.get_released_books() == []
 
 
 def test_get_existing_books_carries_notification_state(db, series_id):

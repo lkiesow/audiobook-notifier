@@ -70,7 +70,25 @@ def _normalize_url(url: str) -> str:
 def index():
     if _auth_enabled and not session.get("authenticated"):
         return redirect("/login")
-    return render_template("index.html", auth_enabled=_auth_enabled)
+    return render_template(
+        "index.html", auth_enabled=_auth_enabled, active_tab="overview"
+    )
+
+
+@app.get("/add")
+def add_page():
+    if _auth_enabled and not session.get("authenticated"):
+        return redirect("/login")
+    return render_template("add.html", auth_enabled=_auth_enabled, active_tab="add")
+
+
+@app.get("/backlog")
+def backlog_page():
+    if _auth_enabled and not session.get("authenticated"):
+        return redirect("/login")
+    return render_template(
+        "backlog.html", auth_enabled=_auth_enabled, active_tab="backlog"
+    )
 
 
 @app.get("/login")
@@ -174,6 +192,12 @@ def delete_series(series_id):
 @login_required
 def upcoming_books():
     return jsonify(database.get_upcoming_books())
+
+
+@app.get("/api/backlog")
+@login_required
+def backlog_books():
+    return jsonify(database.get_released_books())
 
 
 @app.get("/api/releases-today")

@@ -7,34 +7,6 @@
   <link rel="stylesheet" href="/style.css">
   <link rel="icon" href="/icon.png" type="image/png">
   <style>
-    body { padding: 2rem 1rem; }
-
-    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; }
-    h1 .signout { margin-left: auto; font-size: 0.75rem; color: var(--color-muted); text-decoration: none; }
-    h1 .signout:hover { color: var(--color-text); }
-
-    main { max-width: 900px; margin: 0 auto; }
-
-    .panel {
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
-      border-radius: 6px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1.5rem;
-    }
-    .panel h2 { font-size: 1rem; margin-bottom: 0.75rem; }
-
-    #add-form { display: flex; gap: 0.5rem; }
-    #url-input { flex: 1; }
-    #add-error { color: var(--color-danger); font-size: 0.85rem; margin-top: 0.5rem; }
-
-    .book-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
-    .book-list li { font-size: 0.88rem; display: flex; align-items: center; gap: 0.75rem; }
-    .book-list .cover-thumb { width: 44px; height: 44px; border-radius: 4px; flex-shrink: 0; }
-    .book-list .upcoming-text { display: flex; flex-direction: column; gap: 0.15rem; }
-    .book-list .upcoming-series { color: var(--color-muted); }
-    #upcoming-list .upcoming-date { color: var(--color-meta); }
-
     #series-container { display: flex; flex-direction: column; gap: 1rem; }
 
     .series-card {
@@ -76,19 +48,14 @@
 
     .col-cover { width: 52px; padding-right: 4px; }
     .cover-thumb { display: block; width: 40px; height: 40px; object-fit: cover; border-radius: 3px; }
-    #upcoming-list .cover-thumb { width: 44px; height: 44px; border-radius: 4px; flex-shrink: 0; }
 
     #series-heading { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 0.75rem; padding: 0 2px; }
     #series-heading h2 { font-size: 1rem; }
     #series-stats { font-size: 0.78rem; color: var(--color-meta); margin-left: auto; }
 
-    .empty-state { padding: 1rem; color: var(--color-muted); font-size: 0.85rem; }
-
     #loading { color: var(--color-muted); font-size: 0.9rem; }
 
     @media (max-width: 560px) {
-      body { padding: 1rem 0.5rem; }
-      button { min-height: 44px; padding: 0.4rem 0.75rem; }
       .col-narrator, .col-language, .col-duration { display: none; }
       .stack-thumb + .stack-thumb { margin-left: -24px; }
 
@@ -130,25 +97,7 @@
 </head>
 <body>
   <main>
-    <h1>
-      <img src="/icon.png" alt="" height="32" style="border-radius:4px;flex-shrink:0">
-      Audiobook Notifier
-      {% if auth_enabled %}<a href="/logout" class="signout">Sign out</a>{% endif %}
-    </h1>
-
-    <section id="add-section" class="panel">
-      <h2>Track a new series</h2>
-      <form id="add-form">
-        <input
-          type="url"
-          id="url-input"
-          placeholder="https://www.audible.de/series/…"
-          required
-        >
-        <button type="submit">Add</button>
-      </form>
-      <div id="add-error"></div>
-    </section>
+    {% include "_header.html" %}
 
     <section id="today-section" class="panel" style="display:none">
       <h2>Out today</h2>
@@ -168,6 +117,7 @@
     <div id="series-container"></div>
   </main>
 
+  <script src="/common.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

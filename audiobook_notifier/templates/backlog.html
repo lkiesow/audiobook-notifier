@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Backlog · Audiobook Notifier</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="/icon.png" type="image/png">
+  <style>
+    #backlog-heading { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 0.75rem; padding: 0 2px; }
+    #backlog-heading h2 { font-size: 1rem; }
+    #backlog-stats { font-size: 0.78rem; color: var(--color-meta); margin-left: auto; }
+    #backlog-loading { color: var(--color-muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    {% include "_header.html" %}
+
+    <div id="backlog-heading">
+      <h2>Released books</h2>
+      <span id="backlog-stats"></span>
+    </div>
+    <div id="backlog-loading">Loading…</div>
+    <section id="backlog-section" class="panel" style="display:none">
+      <ul id="backlog-list" class="book-list backlog-list"></ul>
+    </section>
+  </main>
+
+  <script src="/common.js"></script>
+  <script src="/backlog.js"></script>
+</body>
+</html>
