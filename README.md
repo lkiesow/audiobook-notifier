@@ -174,22 +174,21 @@ series is indistinguishable from a series that lost books.
 
 ## Production
 
-Instead of using the internal web server, which is meant for debugging only, in production, you can run the app using a WSGI server like gunicorn, installed by the `server` extra:
+Instead of using the internal web server, which is meant for debugging only, in production, you can run the app using a WSGI server like waitress, installed by the `server` extra:
 
 ```bash
 pip install -e '.[server]'
 
-gunicorn -w 1 --threads 4 --timeout 0 -b 127.0.0.1:5000 audiobook_notifier.__main__:app
+waitress-serve --threads 4 --listen 127.0.0.1:5000 audiobook_notifier.__main__:app
 ```
 
-`-w 1` is required: the scheduler starts on import, so every additional worker
-would scrape and notify a second time.
+waitress runs as a single process, which is what the app needs: the scheduler
+starts on import, so a server forking several workers would scrape and notify
+once per worker. It also has no worker timeout that could kill the process in
+the middle of a scrape run, which lives in a background thread.
 
-`--timeout 0` matters just as much. Gunicorn's 30-second default is there to
-kill a wedged request handler, but the scrape run lives in a background thread
-inside that same worker and takes far longer, so the arbiter ends up SIGKILLing
-a perfectly healthy worker in the middle of a run — losing it entirely and
-resetting the interval timer.
+There is no supervisor process, so if the process dies, restarting it is up to
+you (systemd `Restart=always`, a container restart policy, …).
 
 A full run takes roughly `series × SCRAPE_DELAY_SECONDS`, plus up to ~95s for
 each series that has to exhaust its retries. For 25 series that is around two

@@ -22,7 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Production WSGI server, see the "Production" section of the README.
-server = ["gunicorn"]
+server = ["waitress"]
 dev = ["pytest"]
 
 [tool.setuptools.dynamic]
