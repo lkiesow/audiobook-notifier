@@ -9,9 +9,16 @@ if len(sys.argv) > 1 and sys.argv[1] == "setup-matrix":
 
 from audiobook_notifier import config  # load_dotenv() fires on import
 
+from audiobook_notifier.logs import PriorityFormatter
+
+handler = logging.StreamHandler()
+handler.setFormatter(PriorityFormatter(
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    prefix=config.LOG_PRIORITY_PREFIX,
+))
 logging.basicConfig(
     level=getattr(logging, config.LOG_LEVEL.upper(), logging.INFO),
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[handler],
 )
 
 from audiobook_notifier import database, scheduler

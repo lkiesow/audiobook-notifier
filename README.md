@@ -52,6 +52,7 @@ All configuration is done via environment variables or a `.env` file in the proj
 | `HOST`                     | `127.0.0.1` | Host for the Flask web server
 | `PORT`                     | `5000`      | Port for the Flask web server
 | `LOG_LEVEL`                | `INFO`      | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`)
+| `LOG_PRIORITY_PREFIX`      | `false`     | Set to `true` to prefix log lines with a systemd priority (`<3>`, `<4>`, `<6>`) — the RPM sets this
 | `MATRIX_HOMESERVER`        |             | Matrix homeserver URL — leave blank to disable notifications
 | `MATRIX_ACCESS_TOKEN`      |             | Matrix bot access token
 | `MATRIX_ROOM_ID`           |             | Room ID (`!abc:example.org`) or alias (`#name:example.org`)
