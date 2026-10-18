@@ -48,27 +48,26 @@ class _DatabaseStatsCollector:
     def collect(self):
         from audiobook_notifier import database  # deferred to avoid circular import
 
-        series = database.get_all_series()
+        counts = database.get_counts()
         s = GaugeMetricFamily(
             "audiobook_notifier_tracked_series",
             "Number of series currently tracked",
         )
-        s.add_metric([], len(series))
+        s.add_metric([], counts["series"])
         yield s
 
         b = GaugeMetricFamily(
             "audiobook_notifier_tracked_books",
             "Total books in the database",
         )
-        b.add_metric([], sum(row.get("book_count", 0) for row in series))
+        b.add_metric([], counts["books"])
         yield b
 
-        upcoming = database.get_upcoming_books(limit=9999)
         u = GaugeMetricFamily(
             "audiobook_notifier_upcoming_books",
             "Books with a future release date",
         )
-        u.add_metric([], len(upcoming))
+        u.add_metric([], counts["upcoming"])
         yield u
 
 

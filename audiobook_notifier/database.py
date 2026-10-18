@@ -88,6 +88,17 @@ def get_all_series() -> list[dict]:
     return result
 
 
+def get_counts() -> dict[str, int]:
+    """Row counts for the metrics endpoint, without loading any rows."""
+    with get_connection() as conn:
+        series = conn.execute("SELECT COUNT(*) FROM series").fetchone()[0]
+        books = conn.execute("SELECT COUNT(*) FROM books").fetchone()[0]
+        upcoming = conn.execute(
+            "SELECT COUNT(*) FROM books WHERE release_date > date('now')"
+        ).fetchone()[0]
+    return {"series": series, "books": books, "upcoming": upcoming}
+
+
 def get_upcoming_books(limit: int = 3) -> list[dict]:
     with get_connection() as conn:
         rows = conn.execute(
