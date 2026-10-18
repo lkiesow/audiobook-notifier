@@ -1,0 +1,24 @@
+[Unit]
+Description=Audiobook Notifier
+Documentation=https://github.com/lkiesow/audiobook-notifier
+
+[Container]
+# The tag is set to the release version at build time, so every package runs
+# exactly the image it was released with.
+Image=ghcr.io/lkiesow/audiobook-notifier:@VERSION@
+ContainerName=audiobook-notifier
+# Only reachable from the host, put a reverse proxy like Caddy in front
+PublishPort=127.0.0.1:5000:5000
+Volume=/var/lib/audiobook-notifier:/data:Z
+EnvironmentFile=/etc/audiobook-notifier.conf
+Environment=DATABASE_PATH=/data/data.db
+# RELEASE_CHECK_HOUR follows the host's timezone unless TZ is set
+Timezone=local
+
+[Service]
+Restart=always
+# The first start pulls the image, which can take a while on a small machine
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

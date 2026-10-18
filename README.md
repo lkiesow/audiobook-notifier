@@ -194,3 +194,32 @@ resetting the interval timer.
 A full run takes roughly `series × SCRAPE_DELAY_SECONDS`, plus up to ~95s for
 each series that has to exhaust its retries. For 25 series that is around two
 minutes normally, and up to about 40 minutes if every single series fails.
+
+### Podman
+
+Every [release](https://github.com/lkiesow/audiobook-notifier/releases) ships an
+RPM that runs the container image as a systemd service, using a Podman
+[Quadlet](https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html):
+
+```bash
+dnf install https://github.com/lkiesow/audiobook-notifier/releases/download/<version>/audiobook-notifier-<version>-1.noarch.rpm
+vim /etc/audiobook-notifier.conf
+systemctl start audiobook-notifier
+```
+
+The database lives in `/var/lib/audiobook-notifier`, the logs in the journal
+(`journalctl -u audiobook-notifier`), and the web UI listens on
+`127.0.0.1:5000` for a reverse proxy to pick up. The service starts on boot by
+itself; Quadlet services cannot be `systemctl enable`d.
+
+Each package pins the image of its own release, so updates come with
+`dnf upgrade`, which restarts the service on the new image.
+
+On systems without RPM, download `audiobook-notifier.container` from the
+release instead, put it into `/etc/containers/systemd/`, create
+`/etc/audiobook-notifier.conf` and `/var/lib/audiobook-notifier`, and run
+`systemctl daemon-reload`.
+
+To publish a release, bump `__version__` in `audiobook_notifier/__init__.py`
+and push a matching tag. The release workflow refuses to build when the two
+differ.
