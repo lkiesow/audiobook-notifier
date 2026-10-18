@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS books (
     first_seen_at        TEXT DEFAULT (datetime('now')),
     release_notified_at  TEXT
 );
+
+CREATE INDEX IF NOT EXISTS books_series_release ON books(series_id, release_date);
+CREATE INDEX IF NOT EXISTS books_release ON books(release_date);
 """
 
 # release_date is free-form TEXT filled from scraped pages. Every comparison
