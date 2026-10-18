@@ -17,3 +17,7 @@ venv/
 
 # Editor
 *.swp
+
+# RPM build output, see .rpm/build-rpm.sh
+/audiobook-notifier*.rpm
+/audiobook-notifier.container
