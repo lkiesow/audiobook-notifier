@@ -98,3 +98,10 @@ def test_get_existing_books_carries_notification_state(db, series_id):
     assert existing["A1"]["release_notified_at"] is not None
     assert existing["A2"]["release_notified_at"] is None
     assert existing["A2"]["release_date"] == "2099-01-01"
+
+
+def test_get_counts(db, series_id):
+    db.add_series("https://www.audible.de/series/Other/B000000001")
+    db.insert_book(series_id, make_book("B0TEST0001", "2000-01-01"))
+    db.insert_book(series_id, make_book("B0TEST0002", "2999-01-01"))
+    assert db.get_counts() == {"series": 2, "books": 2, "upcoming": 1}
