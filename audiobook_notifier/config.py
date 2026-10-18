@@ -16,6 +16,7 @@ RELEASE_CHECK_MINUTE: int = int(os.environ.get("RELEASE_CHECK_MINUTE", "0"))
 HOST: str = os.environ.get("HOST", "127.0.0.1")
 PORT: int = int(os.environ.get("PORT", "5000"))
 LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO")
+LOG_PRIORITY_PREFIX: bool = os.environ.get("LOG_PRIORITY_PREFIX", "").lower() == "true"
 
 MATRIX_HOMESERVER: str = os.environ.get("MATRIX_HOMESERVER", "")
 MATRIX_ACCESS_TOKEN: str = os.environ.get("MATRIX_ACCESS_TOKEN", "")
