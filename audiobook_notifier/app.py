@@ -5,7 +5,6 @@ import secrets
 from functools import wraps
 from urllib.parse import urlparse
 
-from authlib.integrations.flask_client import OAuth
 from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 
 from prometheus_client import REGISTRY
@@ -38,8 +37,11 @@ elif _auth_enabled:
 else:
     app.secret_key = secrets.token_hex(32)
 
-oauth = OAuth(app)
+oauth = None
 if _oidc_enabled:
+    from authlib.integrations.flask_client import OAuth
+
+    oauth = OAuth(app)
     oauth.register(
         name="oidc",
         client_id=config.OIDC_CLIENT_ID,
