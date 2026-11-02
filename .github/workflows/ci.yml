@@ -47,6 +47,8 @@ jobs:
         run: |
           curl -sf http://localhost:5000/ | grep -q 'Audiobook Notifier'
           curl -sf http://localhost:5000/app.js | grep -q 'apiFetch'
+          curl -sf http://localhost:5000/manifest.webmanifest | grep -q '"standalone"'
+          curl -sf http://localhost:5000/sw.js | grep -q 'networkFirst'
 
       - name: GET /api/series returns empty list initially
         run: |

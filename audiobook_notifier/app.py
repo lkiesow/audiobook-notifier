@@ -2,6 +2,7 @@ import hmac
 import logging
 import os
 import secrets
+from datetime import timedelta
 from functools import wraps
 from urllib.parse import urlparse
 
@@ -36,6 +37,10 @@ elif _auth_enabled:
     )
 else:
     app.secret_key = secrets.token_hex(32)
+
+# Installed PWAs end the browser session whenever the app is closed, so a
+# session cookie without an expiry would mean signing in on every launch.
+app.permanent_session_lifetime = timedelta(days=config.SESSION_LIFETIME_DAYS)
 
 oauth = None
 if _oidc_enabled:
@@ -130,6 +135,7 @@ def oidc_callback():
         logging.getLogger(__name__).warning("OIDC callback failed", exc_info=True)
         return redirect("/login?error=oidc_failed")
     session["authenticated"] = True
+    session.permanent = True
     return redirect("/")
 
 
@@ -145,6 +151,7 @@ def login():
     if not ok:
         return jsonify({"error": "Invalid credentials"}), 401
     session["authenticated"] = True
+    session.permanent = True
     return jsonify({"authenticated": True})
 
 
