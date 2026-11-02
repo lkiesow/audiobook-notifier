@@ -2,7 +2,7 @@ import logging
 import sqlite3
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, time as dtime, timezone
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -14,17 +14,21 @@ logger = logging.getLogger(__name__)
 
 _scheduler = BackgroundScheduler(job_defaults={"misfire_grace_time": 3600})
 
+# The daily check, the hourly retry and the startup catch-up are separate
+# jobs. Without this they could overlap and announce the same book twice.
+_release_lock = threading.Lock()
+
 
 def _handle_postponement(old: dict, book: dict, series_title: str) -> None:
     """Re-arm the release notification when a release moved to a later date.
 
-    release_notified_at is a one-shot flag. Without this, a book announced on
-    the release date Audible advertised at the time stays marked as announced
-    forever, and the actual release day passes in silence.
+    The release_*_at stamps are one-shot flags. Without this, a book announced
+    on the release date Audible advertised at the time stays marked as
+    announced forever, and the actual release day passes in silence.
     """
     old_date = old["release_date"]
     new_date = book["release_date"]
-    if old["release_notified_at"] is None:
+    if old["release_notified_at"] is None and old["release_pushed_at"] is None:
         return
     if not (scraper.is_iso_date(old_date) and scraper.is_iso_date(new_date)):
         return
@@ -107,14 +111,37 @@ def scrape_all_series() -> None:
 
 
 def check_releasing_today() -> None:
+    with _release_lock:
+        _check_releasing_today()
+
+
+def _check_releasing_today() -> None:
     books = database.get_unnotified_books()
     logger.info("Release check found %d book(s) releasing", len(books))
     for book in books:
-        # Only stamp on success. The books table doubles as the outbox:
-        # release_notified_at IS NULL means "still owed", and the daily cron
-        # plus the startup catch-up job redeliver it.
-        if notifications.notify_releasing_today(book["title"], book["series_title"]):
-            database.mark_release_notified(book["asin"])
+        # Only stamp on success. The books table doubles as the outbox: a NULL
+        # stamp means "still owed" on that channel, and the daily cron, the
+        # hourly retry and the startup catch-up job redeliver it there only.
+        owed = {
+            channel for channel, column in database.RELEASE_COLUMNS.items()
+            if book[column] is None
+        }
+        done = notifications.notify_releasing_today(
+            book["title"], book["series_title"], channels=owed
+        )
+        database.mark_release_notified(book["asin"], done)
+
+
+def retry_owed_releases() -> None:
+    """Hourly redelivery of release notifications that failed on a channel.
+
+    Waits for the configured release check time, so a book releasing today is
+    never announced earlier than it would have been without a failure.
+    """
+    check_time = dtime(config.RELEASE_CHECK_HOUR, config.RELEASE_CHECK_MINUTE)
+    if datetime.now().time() < check_time:
+        return
+    check_releasing_today()
 
 
 def scrape_series_now(series_id: int) -> None:
@@ -139,6 +166,13 @@ def start_scheduler() -> None:
         check_releasing_today,
         trigger=CronTrigger(hour=config.RELEASE_CHECK_HOUR, minute=config.RELEASE_CHECK_MINUTE),
         id="check_releasing",
+        coalesce=True,
+        max_instances=1,
+    )
+    _scheduler.add_job(
+        retry_owed_releases,
+        trigger=IntervalTrigger(hours=1),
+        id="retry_releases",
         coalesce=True,
         max_instances=1,
     )

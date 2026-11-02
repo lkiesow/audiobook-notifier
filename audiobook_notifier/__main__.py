@@ -7,6 +7,11 @@ if len(sys.argv) > 1 and sys.argv[1] == "setup-matrix":
     run_wizard()
     sys.exit(0)
 
+if len(sys.argv) > 1 and sys.argv[1] == "setup-push":
+    from audiobook_notifier.setup_push import run
+    run()
+    sys.exit(0)
+
 from audiobook_notifier import config  # load_dotenv() fires on import
 
 from audiobook_notifier.logs import PriorityFormatter

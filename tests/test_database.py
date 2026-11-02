@@ -63,9 +63,58 @@ def test_unnotified_excludes_malformed_dates(db, series_id):
 def test_clear_release_notified_round_trip(db, series_id):
     db.insert_book(series_id, make_book(release_date="2020-01-01"))
     db.clear_release_notified("B0TEST0001")
-    assert _row(db, "B0TEST0001")["release_notified_at"] is None
-    db.mark_release_notified("B0TEST0001")
-    assert _row(db, "B0TEST0001")["release_notified_at"] is not None
+    row = _row(db, "B0TEST0001")
+    assert row["release_notified_at"] is None
+    assert row["release_pushed_at"] is None
+    db.mark_release_notified("B0TEST0001", {"matrix", "push"})
+    row = _row(db, "B0TEST0001")
+    assert row["release_notified_at"] is not None
+    assert row["release_pushed_at"] is not None
+
+
+def test_insert_past_release_is_pre_stamped_on_every_channel(db, series_id):
+    db.insert_book(series_id, make_book(release_date="2020-01-01"))
+    assert _row(db, "B0TEST0001")["release_pushed_at"] is not None
+
+
+def test_mark_release_notified_stamps_only_the_given_channels(db, series_id):
+    db.insert_book(series_id, make_book(release_date="2020-01-01"))
+    db.clear_release_notified("B0TEST0001")
+
+    db.mark_release_notified("B0TEST0001", {"push"})
+    row = _row(db, "B0TEST0001")
+    assert row["release_notified_at"] is None
+    assert row["release_pushed_at"] is not None
+    # Still owed on Matrix, so the release check keeps picking it up.
+    assert [b["asin"] for b in db.get_unnotified_books()] == ["B0TEST0001"]
+
+    db.mark_release_notified("B0TEST0001", {"matrix"})
+    assert db.get_unnotified_books() == []
+
+
+def test_migration_copies_matrix_stamps_to_push(db, series_id):
+    """Enabling push on an old database must not announce the whole backlog."""
+    db.insert_book(series_id, make_book(asin="A1", release_date="2020-01-01"))
+    db.insert_book(series_id, make_book(asin="A2", release_date="2099-01-01"))
+    with db.get_connection() as conn:
+        conn.execute("ALTER TABLE books DROP COLUMN release_pushed_at")
+
+    db.init_db()
+
+    old = _row(db, "A1")
+    assert old["release_pushed_at"] == old["release_notified_at"] is not None
+    assert _row(db, "A2")["release_pushed_at"] is None
+    assert db.get_unnotified_books() == []
+
+
+def test_push_subscription_upsert(db):
+    assert db.save_push_subscription("https://push.invalid/a", "k1", "s1", "UA") is True
+    assert db.save_push_subscription("https://push.invalid/a", "k2", "s2", "UA") is False
+    assert db.get_push_subscriptions() == [
+        {"endpoint": "https://push.invalid/a", "p256dh": "k2", "auth": "s2"}
+    ]
+    db.delete_push_subscription("https://push.invalid/a")
+    assert db.get_push_subscriptions() == []
 
 
 def test_released_books_newest_first_with_today_included(db, series_id):

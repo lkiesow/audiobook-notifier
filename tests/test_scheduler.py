@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 
 from audiobook_notifier import notifications, scheduler, scraper
@@ -7,13 +9,17 @@ from tests.conftest import make_book
 @pytest.fixture
 def sent(monkeypatch):
     """Capture notifications instead of sending them. Delivery succeeds."""
-    # Flip calls["delivered"] to simulate Matrix being unreachable.
-    calls = {"postponed": [], "new_book": [], "releasing_today": [], "delivered": True}
+    # Shrink calls["done"] to simulate channels being unreachable.
+    calls = {
+        "postponed": [], "new_book": [], "releasing_today": [], "channels": [],
+        "done": set(notifications.CHANNELS),
+    }
 
     def record(kind):
-        def capture(*args):
+        def capture(*args, channels=notifications.CHANNELS):
             calls[kind].append(args)
-            return calls["delivered"]
+            calls["channels"].append(set(channels))
+            return set(channels) & calls["done"]
         return capture
 
     monkeypatch.setattr(notifications, "notify_release_postponed", record("postponed"))
@@ -31,11 +37,15 @@ def scrape_returns(monkeypatch, books, series_title="Test Series"):
     )
 
 
-def notified_at(db, asin):
+def notified_at(db, asin, column="release_notified_at"):
     with db.get_connection() as conn:
         return conn.execute(
-            "SELECT release_notified_at FROM books WHERE asin = ?", (asin,)
+            f"SELECT {column} FROM books WHERE asin = ?", (asin,)
         ).fetchone()[0]
+
+
+def pushed_at(db, asin):
+    return notified_at(db, asin, "release_pushed_at")
 
 
 def test_postponed_release_is_rearmed_and_announced(db, series_id, sent, monkeypatch):
@@ -123,12 +133,12 @@ def test_undelivered_release_stays_queued_for_the_next_check(db, series_id, sent
     """A lost message must not consume the flag — the books table is the outbox."""
     db.insert_book(series_id, make_book(release_date="2020-01-01"))
     db.clear_release_notified("B0TEST0001")
-    sent["delivered"] = False
+    sent["done"] = set()
 
     scheduler.check_releasing_today()
     assert notified_at(db, "B0TEST0001") is None
 
-    sent["delivered"] = True
+    sent["done"] = set(notifications.CHANNELS)
     scheduler.check_releasing_today()
     assert notified_at(db, "B0TEST0001") is not None
     assert len(sent["releasing_today"]) == 2
@@ -168,3 +178,57 @@ def test_a_never_scraped_series_stays_quiet_on_its_first_run(db, sent, monkeypat
     scheduler.scrape_and_update(sid)
 
     assert sent["new_book"] == []
+
+
+def test_failed_channel_is_retried_alone(db, series_id, sent):
+    """Matrix down, push fine: the next check must not push the phone again."""
+    db.insert_book(series_id, make_book(release_date="2020-01-01"))
+    db.clear_release_notified("B0TEST0001")
+    sent["done"] = {"push"}
+
+    scheduler.check_releasing_today()
+    assert notified_at(db, "B0TEST0001") is None
+    assert pushed_at(db, "B0TEST0001") is not None
+
+    sent["done"] = set(notifications.CHANNELS)
+    scheduler.check_releasing_today()
+    assert sent["channels"] == [{"matrix", "push"}, {"matrix"}]
+    assert notified_at(db, "B0TEST0001") is not None
+
+
+def test_postponement_rearms_every_channel(db, series_id, sent, monkeypatch):
+    db.insert_book(series_id, make_book(release_date="2026-08-05"))
+    # Announced by push only, Matrix still owed.
+    with db.get_connection() as conn:
+        conn.execute("UPDATE books SET release_notified_at = NULL")
+
+    scrape_returns(monkeypatch, [make_book(release_date="2026-08-12")])
+    scheduler.scrape_and_update(series_id)
+
+    assert pushed_at(db, "B0TEST0001") is None
+    assert len(sent["postponed"]) == 1
+
+
+class _Clock:
+    """Stands in for the datetime class in scheduler, frozen at one moment."""
+
+    def __init__(self, hour, minute):
+        self.moment = datetime(2026, 8, 12, hour, minute)
+
+    def now(self, tz=None):
+        return self.moment
+
+
+def test_hourly_retry_waits_for_the_release_check_time(db, series_id, sent, monkeypatch):
+    db.insert_book(series_id, make_book(release_date="2020-01-01"))
+    db.clear_release_notified("B0TEST0001")
+    monkeypatch.setattr(scheduler.config, "RELEASE_CHECK_HOUR", 9)
+    monkeypatch.setattr(scheduler.config, "RELEASE_CHECK_MINUTE", 0)
+
+    monkeypatch.setattr(scheduler, "datetime", _Clock(8, 59))
+    scheduler.retry_owed_releases()
+    assert sent["releasing_today"] == []
+
+    monkeypatch.setattr(scheduler, "datetime", _Clock(9, 0))
+    scheduler.retry_owed_releases()
+    assert len(sent["releasing_today"]) == 1

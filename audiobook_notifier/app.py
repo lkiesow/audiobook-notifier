@@ -2,6 +2,7 @@ import hmac
 import logging
 import os
 import secrets
+import threading
 from datetime import timedelta
 from functools import wraps
 from urllib.parse import urlparse
@@ -11,7 +12,7 @@ from flask import Flask, jsonify, redirect, render_template, request, send_from_
 from prometheus_client import REGISTRY
 from prometheus_client.openmetrics.exposition import CONTENT_TYPE_LATEST, generate_latest
 
-from audiobook_notifier import config, database, metrics, scheduler
+from audiobook_notifier import config, database, metrics, notifications, scheduler
 
 app = Flask(
     __name__,
@@ -27,6 +28,7 @@ _oidc_enabled = bool(
     and config.OIDC_ISSUER_URL
 )
 _auth_enabled = _local_auth_enabled or _oidc_enabled
+_push_enabled = notifications.push_enabled()
 
 if config.SECRET_KEY:
     app.secret_key = config.SECRET_KEY
@@ -78,7 +80,10 @@ def index():
     if _auth_enabled and not session.get("authenticated"):
         return redirect("/login")
     return render_template(
-        "index.html", auth_enabled=_auth_enabled, active_tab="overview"
+        "index.html",
+        auth_enabled=_auth_enabled,
+        push_enabled=_push_enabled,
+        active_tab="overview",
     )
 
 
@@ -86,7 +91,12 @@ def index():
 def add_page():
     if _auth_enabled and not session.get("authenticated"):
         return redirect("/login")
-    return render_template("add.html", auth_enabled=_auth_enabled, active_tab="add")
+    return render_template(
+        "add.html",
+        auth_enabled=_auth_enabled,
+        push_enabled=_push_enabled,
+        active_tab="add",
+    )
 
 
 @app.get("/backlog")
@@ -94,7 +104,10 @@ def backlog_page():
     if _auth_enabled and not session.get("authenticated"):
         return redirect("/login")
     return render_template(
-        "backlog.html", auth_enabled=_auth_enabled, active_tab="backlog"
+        "backlog.html",
+        auth_enabled=_auth_enabled,
+        push_enabled=_push_enabled,
+        active_tab="backlog",
     )
 
 
@@ -230,6 +243,55 @@ def refresh_series(series_id):
         return jsonify({"error": "Not found"}), 404
     scheduler.scrape_series_now(series_id)
     return jsonify({"status": "refresh started"}), 202
+
+
+@app.get("/api/push/key")
+@login_required
+def push_key():
+    if not _push_enabled:
+        return jsonify({"error": "Push notifications are not configured"}), 404
+    return jsonify({"publicKey": config.VAPID_PUBLIC_KEY})
+
+
+@app.post("/api/push/subscriptions")
+@login_required
+def push_subscribe():
+    if not _push_enabled:
+        return jsonify({"error": "Push notifications are not configured"}), 404
+    body = request.get_json(silent=True) or {}
+    endpoint = body.get("endpoint")
+    keys = body.get("keys") or {}
+    if not (
+        isinstance(endpoint, str)
+        and endpoint.startswith("https://")
+        and isinstance(keys.get("p256dh"), str)
+        and isinstance(keys.get("auth"), str)
+    ):
+        return jsonify({"error": "Invalid push subscription"}), 400
+    subscription = {"endpoint": endpoint, "p256dh": keys["p256dh"], "auth": keys["auth"]}
+    is_new = database.save_push_subscription(
+        endpoint, keys["p256dh"], keys["auth"], request.headers.get("User-Agent")
+    )
+    if is_new:
+        # Retries can take a while; the device does not need to wait for them.
+        threading.Thread(
+            target=notifications.send_push_welcome,
+            args=(subscription,),
+            daemon=True,
+            name="push-welcome",
+        ).start()
+    return jsonify({"subscribed": True}), 201 if is_new else 200
+
+
+@app.delete("/api/push/subscriptions")
+@login_required
+def push_unsubscribe():
+    body = request.get_json(silent=True) or {}
+    endpoint = body.get("endpoint")
+    if not isinstance(endpoint, str):
+        return jsonify({"error": "endpoint is required"}), 400
+    database.delete_push_subscription(endpoint)
+    return "", 204
 
 
 @app.get("/metrics")
