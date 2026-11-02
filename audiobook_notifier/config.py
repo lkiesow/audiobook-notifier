@@ -36,6 +36,7 @@ MATRIX_RETRY_MAX_BACKOFF_SECONDS: float = float(os.environ.get("MATRIX_RETRY_MAX
 AUTH_USERNAME: str = os.environ.get("AUTH_USERNAME", "")
 AUTH_PASSWORD: str = os.environ.get("AUTH_PASSWORD", "")
 SECRET_KEY: str = os.environ.get("SECRET_KEY", "")
+SESSION_LIFETIME_DAYS: int = int(os.environ.get("SESSION_LIFETIME_DAYS", "30"))
 
 OIDC_CLIENT_ID: str = os.environ.get("OIDC_CLIENT_ID", "")
 OIDC_CLIENT_SECRET: str = os.environ.get("OIDC_CLIENT_SECRET", "")

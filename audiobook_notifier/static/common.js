@@ -2,6 +2,24 @@
 
 // Helpers shared by every page. Loaded before the page's own script.
 
+// --- PWA ---
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js');
+}
+
+// An installed app can sit in memory for days. Reload when it comes back
+// after a while so it does not show stale data.
+const STALE_AFTER_MS = 10 * 60 * 1000;
+let hiddenSince = null;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    hiddenSince = Date.now();
+  } else if (hiddenSince && Date.now() - hiddenSince > STALE_AFTER_MS) {
+    location.reload();
+  }
+});
+
 // --- API ---
 
 async function apiFetch(path, options = {}) {

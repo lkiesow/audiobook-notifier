@@ -13,6 +13,7 @@ A self-hosted web app that tracks Audible audiobook series and notifies you when
 - Backlog page listing every past release, newest first
 - Matrix notifications (optional) — with a setup wizard to create a bot room
 - Light/dark mode web UI
+- Installable as an app on phone or desktop (PWA), showing the last-known data when offline
 - No external runtime dependencies beyond Python
 
 ## Installation
@@ -66,6 +67,7 @@ All configuration is done via environment variables or a `.env` file in the proj
 | `MATRIX_RETRY_BACKOFF_SECONDS`     | `2`  | Initial delay between send attempts, doubling each time
 | `MATRIX_RETRY_MAX_BACKOFF_SECONDS` | `60` | Upper bound on that delay
 | `SECRET_KEY`               |             | Secret key for signing session cookies — required when using any form of authentication; an ephemeral key is used if not set (sessions reset on restart)
+| `SESSION_LIFETIME_DAYS`    | `30`        | How long a login stays valid
 | `AUTH_USERNAME`            |             | Username for local authentication — leave blank to disable
 | `AUTH_PASSWORD`            |             | Password for local authentication
 | `OIDC_CLIENT_ID`           |             | OIDC client ID — leave blank to disable OIDC login
@@ -107,6 +109,21 @@ Both authentication methods use Flask session cookies. Set `SECRET_KEY` to a sta
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
+
+Logins are kept for `SESSION_LIFETIME_DAYS` (default 30), also across browser and app restarts.
+
+## Install as an app
+
+The web UI is a progressive web app, so it can be installed to a phone's home
+screen or as a desktop app. Browsers only offer this over HTTPS (or on
+`localhost`), so put the app behind a reverse proxy with TLS.
+
+- **Android (Chrome):** browser menu → *Install app* (or *Add to Home screen*)
+- **iOS (Safari):** Share → *Add to Home Screen*
+- **Desktop (Chrome, Edge):** the install icon in the address bar
+
+The installed app always loads fresh data when online. Offline, it shows
+whatever it loaded last. Signing out clears that cache.
 
 ## Matrix Notifications
 
