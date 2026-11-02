@@ -33,6 +33,21 @@ MATRIX_RETRY_ATTEMPTS: int = int(os.environ.get("MATRIX_RETRY_ATTEMPTS", "3"))
 MATRIX_RETRY_BACKOFF_SECONDS: float = float(os.environ.get("MATRIX_RETRY_BACKOFF_SECONDS", "2"))
 MATRIX_RETRY_MAX_BACKOFF_SECONDS: float = float(os.environ.get("MATRIX_RETRY_MAX_BACKOFF_SECONDS", "60"))
 
+VAPID_PUBLIC_KEY: str = os.environ.get("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY: str = os.environ.get("VAPID_PRIVATE_KEY", "")
+VAPID_SUBJECT: str = os.environ.get("VAPID_SUBJECT", "")
+
+PUSH_NEW_BOOK: bool = os.environ.get("PUSH_NEW_BOOK", "true").lower() == "true"
+PUSH_RELEASING_TODAY: bool = os.environ.get("PUSH_RELEASING_TODAY", "true").lower() == "true"
+PUSH_POSTPONED: bool = os.environ.get("PUSH_POSTPONED", "true").lower() == "true"
+PUSH_SCRAPE_ERROR: bool = os.environ.get("PUSH_SCRAPE_ERROR", "").lower() == "true"
+
+PUSH_TTL_SECONDS: int = int(os.environ.get("PUSH_TTL_SECONDS", "86400"))
+PUSH_TIMEOUT_SECONDS: int = int(os.environ.get("PUSH_TIMEOUT_SECONDS", "10"))
+PUSH_RETRY_ATTEMPTS: int = int(os.environ.get("PUSH_RETRY_ATTEMPTS", "3"))
+PUSH_RETRY_BACKOFF_SECONDS: float = float(os.environ.get("PUSH_RETRY_BACKOFF_SECONDS", "2"))
+PUSH_RETRY_MAX_BACKOFF_SECONDS: float = float(os.environ.get("PUSH_RETRY_MAX_BACKOFF_SECONDS", "60"))
+
 AUTH_USERNAME: str = os.environ.get("AUTH_USERNAME", "")
 AUTH_PASSWORD: str = os.environ.get("AUTH_PASSWORD", "")
 SECRET_KEY: str = os.environ.get("SECRET_KEY", "")

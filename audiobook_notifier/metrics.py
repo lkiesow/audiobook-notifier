@@ -14,14 +14,14 @@ new_books_discovered_total = Counter(
 
 notifications_sent_total = Counter(
     "audiobook_notifier_notifications_sent_total",
-    "Total Matrix notifications sent by type",
-    ["type"],
+    "Total notifications sent, by type and channel",
+    ["type", "channel"],
 )
 
 notifications_failed_total = Counter(
     "audiobook_notifier_notifications_failed_total",
-    "Total Matrix notifications that could not be delivered, by type",
-    ["type"],
+    "Total notifications that could not be delivered, by type and channel",
+    ["type", "channel"],
 )
 
 last_scrape_timestamp_seconds = Gauge(

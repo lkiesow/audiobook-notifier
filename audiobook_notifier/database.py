@@ -27,7 +27,17 @@ CREATE TABLE IF NOT EXISTS books (
     book_url             TEXT,
     cover_image_url      TEXT,
     first_seen_at        TEXT DEFAULT (datetime('now')),
-    release_notified_at  TEXT
+    release_notified_at  TEXT,
+    release_pushed_at    TEXT
+);
+
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    endpoint    TEXT UNIQUE NOT NULL,
+    p256dh      TEXT NOT NULL,
+    auth        TEXT NOT NULL,
+    user_agent  TEXT,
+    created_at  TEXT DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS books_series_release ON books(series_id, release_date);
@@ -50,19 +60,35 @@ def get_connection() -> sqlite3.Connection:
 # Columns added after the first release. CREATE TABLE IF NOT EXISTS leaves an
 # existing table alone, so new columns have to be added by hand.
 _MIGRATIONS = (
-    ("series", "api_backfilled_at", "ALTER TABLE series ADD COLUMN api_backfilled_at TEXT"),
+    ("series", "api_backfilled_at", (
+        "ALTER TABLE series ADD COLUMN api_backfilled_at TEXT",
+    )),
+    # Copy the Matrix stamps over, or enabling push would announce every
+    # release in the backlog.
+    ("books", "release_pushed_at", (
+        "ALTER TABLE books ADD COLUMN release_pushed_at TEXT",
+        "UPDATE books SET release_pushed_at = release_notified_at",
+    )),
 )
+
+# Release-day delivery is tracked per notification channel, so a channel that
+# failed is retried without repeating the message on the one that succeeded.
+RELEASE_COLUMNS = {
+    "matrix": "release_notified_at",
+    "push": "release_pushed_at",
+}
 
 
 def init_db() -> None:
     with get_connection() as conn:
         conn.executescript(_SCHEMA)
-        for table, column, statement in _MIGRATIONS:
+        for table, column, statements in _MIGRATIONS:
             columns = {
                 r["name"] for r in conn.execute(f"PRAGMA table_info({table})")
             }
             if column not in columns:
-                conn.execute(statement)
+                for statement in statements:
+                    conn.execute(statement)
 
 
 # --- Series ---
@@ -224,7 +250,8 @@ def get_existing_books(series_id: int) -> dict[str, dict]:
     """
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT asin, release_date, release_notified_at FROM books "
+            "SELECT asin, release_date, release_notified_at, release_pushed_at "
+            "FROM books "
             "WHERE series_id = ?",
             (series_id,),
         ).fetchall()
@@ -238,8 +265,10 @@ def insert_book(series_id: int, book: dict) -> None:
             INSERT INTO books
                 (series_id, asin, title, subtitle, author, narrator,
                  duration, release_date, language, book_url, cover_image_url,
-                 release_notified_at)
+                 release_notified_at, release_pushed_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                CASE WHEN ? GLOB '{glob}' AND ? <= date('now')
+                     THEN datetime('now') ELSE NULL END,
                 CASE WHEN ? GLOB '{glob}' AND ? <= date('now')
                      THEN datetime('now') ELSE NULL END)
             """.format(glob=ISO_DATE_GLOB),
@@ -255,6 +284,8 @@ def insert_book(series_id: int, book: dict) -> None:
                 book["language"],
                 book["book_url"],
                 book.get("cover_image_url"),
+                book["release_date"],
+                book["release_date"],
                 book["release_date"],
                 book["release_date"],
             ),
@@ -299,24 +330,64 @@ def get_unnotified_books() -> list[dict]:
             JOIN series s ON s.id = b.series_id
             WHERE b.release_date GLOB '{glob}'
               AND b.release_date <= date('now')
-              AND b.release_notified_at IS NULL
+              AND (b.release_notified_at IS NULL OR b.release_pushed_at IS NULL)
             """.format(glob=ISO_DATE_GLOB)
         ).fetchall()
     return [dict(r) for r in rows]
 
 
-def mark_release_notified(asin: str) -> None:
+def mark_release_notified(asin: str, channels) -> None:
+    """Stamp the release notification as done on the given channels."""
+    columns = [RELEASE_COLUMNS[c] for c in channels]
+    if not columns:
+        return
+    assignments = ", ".join(f"{c} = datetime('now')" for c in columns)
     with get_connection() as conn:
-        conn.execute(
-            "UPDATE books SET release_notified_at = datetime('now') WHERE asin = ?",
-            (asin,),
-        )
+        conn.execute(f"UPDATE books SET {assignments} WHERE asin = ?", (asin,))
 
 
 def clear_release_notified(asin: str) -> None:
     """Re-arm the release notification, e.g. after a release was postponed."""
     with get_connection() as conn:
         conn.execute(
-            "UPDATE books SET release_notified_at = NULL WHERE asin = ?",
+            "UPDATE books SET release_notified_at = NULL, release_pushed_at = NULL "
+            "WHERE asin = ?",
             (asin,),
         )
+
+
+# --- Push subscriptions ---
+
+def save_push_subscription(
+    endpoint: str, p256dh: str, auth: str, user_agent: str | None
+) -> bool:
+    """Store a browser's push subscription. Returns True if it is new."""
+    with get_connection() as conn:
+        existing = conn.execute(
+            "SELECT 1 FROM push_subscriptions WHERE endpoint = ?", (endpoint,)
+        ).fetchone()
+        conn.execute(
+            """
+            INSERT INTO push_subscriptions (endpoint, p256dh, auth, user_agent)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(endpoint) DO UPDATE SET
+                p256dh = excluded.p256dh,
+                auth = excluded.auth,
+                user_agent = excluded.user_agent
+            """,
+            (endpoint, p256dh, auth, user_agent),
+        )
+    return existing is None
+
+
+def delete_push_subscription(endpoint: str) -> None:
+    with get_connection() as conn:
+        conn.execute("DELETE FROM push_subscriptions WHERE endpoint = ?", (endpoint,))
+
+
+def get_push_subscriptions() -> list[dict]:
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT endpoint, p256dh, auth FROM push_subscriptions"
+        ).fetchall()
+    return [dict(r) for r in rows]

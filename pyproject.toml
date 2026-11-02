@@ -18,6 +18,8 @@ dependencies = [
     "python-dotenv",
     "authlib",
     "prometheus_client",
+    "pywebpush",
+    "cryptography",
 ]
 
 [project.optional-dependencies]

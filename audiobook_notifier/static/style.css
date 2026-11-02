@@ -48,9 +48,30 @@ body {
 main { max-width: 900px; margin: 0 auto; }
 
 h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 0.8rem; }
-h1 .signout { margin-left: auto; text-decoration: none; margin-top: 2px; margin-bottom: -2px; }
+h1 .header-actions { margin-left: auto; display: flex; align-items: center; gap: 0.8rem; }
+h1 .signout { text-decoration: none; margin-top: 2px; margin-bottom: -2px; }
 h1 .signout svg { fill: var(--color-muted); width: 18px; height: 18px; }
 h1 .signout:hover svg { fill: var(--color-text); }
+
+/* Push toggle: outlined bell when off, filled when on */
+h1 .icon-button {
+  display: flex;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 2px;
+  margin-bottom: -2px;
+  cursor: pointer;
+}
+h1 .icon-button[hidden] { display: none; }
+h1 .icon-button:hover { background: none; }
+h1 .icon-button svg { fill: var(--color-muted); width: 20px; height: 20px; }
+h1 .icon-button:hover:not(:disabled) svg,
+h1 .icon-button[data-state="on"] svg { fill: var(--color-text); }
+h1 .icon-button:disabled { cursor: not-allowed; opacity: 0.5; }
+h1 .icon-button .bell-on,
+h1 .icon-button[data-state="on"] .bell-off { display: none; }
+h1 .icon-button[data-state="on"] .bell-on { display: block; }
 
 .tabs {
   display: flex;
